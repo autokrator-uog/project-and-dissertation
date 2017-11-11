@@ -8,11 +8,12 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(args: ArgMatches) -> Context {
+    pub fn new(args: &ArgMatches, sub_args: &ArgMatches) -> Context {
         let brokers = args.value_of("brokers").unwrap();
         let group = args.value_of("group").unwrap();
-        let input = args.value_of("input-topic").unwrap();
-        let output = args.value_of("output-topic").unwrap();
+
+        let input = sub_args.value_of("input-topic").unwrap();
+        let output = sub_args.value_of("output-topic").unwrap();
 
         Context {
             brokers: brokers.to_string(),

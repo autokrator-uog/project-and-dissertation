@@ -14,7 +14,7 @@ mod context;
 mod server;
 
 use colored::*;
-use clap::{Arg, App, AppSettings, SubCommand};
+use clap::{Arg, ArgMatches, App, AppSettings, SubCommand};
 use log::{LogLevel, LogLevelFilter};
 
 use context::Context;
@@ -42,7 +42,7 @@ fn main() {
              .short("l")
              .long("log-level")
              .help("Log level")
-             .default_value("trace")
+             .default_value("debug")
              .possible_values(&["off", "trace", "debug", "info", "warn", "error"])
              .takes_value(true))
         .subcommand(SubCommand::with_name("server")
@@ -63,6 +63,17 @@ fn main() {
                          .takes_value(true))
         ).get_matches();
 
+    logging(&matches);
+
+    match matches.subcommand() {
+        ("server", Some(sub)) => {
+            bootstrap_server(Context::new(&matches, &sub));
+        },
+        _ => { }
+    };
+}
+
+fn logging(matches: &ArgMatches) {
     let level = value_t!(matches, "log-level", LogLevelFilter).unwrap_or(LogLevelFilter::Trace);
 
     fern::Dispatch::new()
@@ -90,13 +101,4 @@ fn main() {
         .level(level)
         .chain(std::io::stdout())
         .apply().unwrap();
-
-    match matches.subcommand_name() {
-        Some("server") => {
-            let ctx = Context::new(matches);
-            bootstrap_server(ctx);
-        },
-        None => { },
-        _ => { }
-    };
 }
