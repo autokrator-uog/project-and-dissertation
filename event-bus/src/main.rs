@@ -1,6 +1,6 @@
 #[macro_use] extern crate log;
 extern crate chrono;
-extern crate clap;
+#[macro_use] extern crate clap;
 extern crate colored;
 extern crate fern;
 
@@ -14,41 +14,56 @@ mod context;
 mod server;
 
 use colored::*;
-use clap::{App, Arg};
+use clap::{Arg, App, AppSettings, SubCommand};
 use log::{LogLevel, LogLevelFilter};
 
 use context::Context;
 use server::bootstrap_server;
 
 fn main() {
-    let matches = App::new("event-bus")
-        .version(option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"))
-        .about("Event Bus Research Prototype for Avaloq - University of Glasgow Team Project SED")
+    let matches = App::new(crate_name!())
+        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .version(crate_version!())
+        .author(crate_authors!())
+        .about(crate_description!())
         .arg(Arg::with_name("brokers")
              .short("b")
-             .long("brokers")
+             .long("broker")
              .help("Broker list in Kafka format")
-             .takes_value(true)
-             .default_value("localhost:9092"))
+             .default_value("localhost:9092")
+             .takes_value(true))
         .arg(Arg::with_name("group")
              .short("g")
              .long("group")
-             .help("Consumer group")
-             .takes_value(true)
-             .default_value("default_consumer_group"))
-        .arg(Arg::with_name("input-topic")
-             .short("i")
-             .long("input-topic")
-             .help("Input topic for subscription")
-             .takes_value(true)
-             .required(true))
-        .arg(Arg::with_name("output-topic")
-             .short("o")
-             .long("output-topic")
-             .help("Output topic for consumption")
-             .takes_value(true)
-             .required(true))
-        .get_matches();
+             .help("Consumer group name")
+             .default_value(crate_name!())
+             .takes_value(true))
+        .arg(Arg::with_name("log-level")
+             .short("l")
+             .long("log-level")
+             .help("Log level")
+             .default_value("trace")
+             .possible_values(&["off", "trace", "debug", "info", "warn", "error"])
+             .takes_value(true))
+        .subcommand(SubCommand::with_name("server")
+                    .about("Start the event bus daemon")
+                    .version(crate_version!())
+                    .author(crate_authors!())
+                    .arg(Arg::with_name("input-topic")
+                         .short("i")
+                         .long("input")
+                         .help("Input topic")
+                         .required(true)
+                         .takes_value(true))
+                    .arg(Arg::with_name("output-topic")
+                         .short("o")
+                         .long("output")
+                         .help("Output topic")
+                         .required(true)
+                         .takes_value(true))
+        ).get_matches();
+
+    let level = value_t!(matches, "log-level", LogLevelFilter).unwrap_or(LogLevelFilter::Trace);
 
     fern::Dispatch::new()
         .format(|out, message, record| {
@@ -72,10 +87,16 @@ fn main() {
                 message
             ))
         })
-        .level(LogLevelFilter::Trace)
+        .level(level)
         .chain(std::io::stdout())
         .apply().unwrap();
 
-    let ctx = Context::new(matches);
-    bootstrap_server(ctx);
+    match matches.subcommand_name() {
+        Some("server") => {
+            let ctx = Context::new(matches);
+            bootstrap_server(ctx);
+        },
+        None => { },
+        _ => { }
+    };
 }

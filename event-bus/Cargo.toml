@@ -1,7 +1,18 @@
 [package]
 name = "event-bus"
 version = "0.1.0"
-authors = ["David Wood <david@davidtw.co>"]
+authors = [
+        "Connor Jardine <connorjardine97@gmail.com>",
+        "Frank Bojen <f.bojen@gmail.com>",
+        "Naji Shehab <naji.shehab@hotmail.com>",
+        "Patrick Menlove <patrickmenlove@hotmail.co.uk>",
+        "David Wood <david@davidtw.co>"
+]
+description = """
+Event Bus Research Prototype for Avaloq
+Built by Team SED for the University of Glasgow Level 3 Team Project
+"""
+
 
 [dependencies]
 chrono = "0.4.0"
