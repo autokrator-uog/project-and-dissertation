@@ -16,6 +16,7 @@ extern crate rdkafka;
 extern crate websocket;
 
 mod server;
+mod state;
 mod producer;
 
 use colored::*;

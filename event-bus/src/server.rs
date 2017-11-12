@@ -1,25 +1,20 @@
 use futures::{Future, Sink, Stream};
-use futures::sync::mpsc;
 use futures_cpupool::CpuPool;
 use tokio_core::reactor::{Handle, Core};
 
 use producer;
 
 use std::str::from_utf8;
-use std::collections::HashMap;
-use std::sync::{RwLock, Arc};
 use std::rc::Rc;
 use std::fmt::Debug;
 
 use rdkafka::Message;
-use rdkafka::consumer::Consumer;
-use rdkafka::consumer::stream_consumer::StreamConsumer;
-use rdkafka::config::ClientConfig;
-use rdkafka::producer::FutureProducer;
 
 use websocket::message::OwnedMessage;
 use websocket::async::Server;
 use websocket::server::InvalidConnection;
+
+use state::ServerState;
 
 pub fn bootstrap(bind: &str, brokers: &str, group: &str, topic: &str) {
     // Create our event loop.
@@ -27,8 +22,12 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str, topic: &str) {
 
     // Create a handle for spawning futures from the main thread.
     let handle = core.handle();
+
+    let (state, receive_channel_in, send_channel_in, consumer) = ServerState::create(
+        &core, brokers, group, topic);
+
     // Create a remote for spawning futures from outside the main thread.
-    let remote = core.remote();
+    let remote = state.remote;
 
     // Create the websocket server and add it on the event loop.
     let server = Server::bind(bind, &handle).expect("Failed to create websocket server");
@@ -38,11 +37,13 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str, topic: &str) {
     let cpu_pool = Rc::new(CpuPool::new_num_cpus());
     // Create a thread-safe reference counted, hashmap with a read-write lock. Used to contain the
     // thread id to output sink mappings.
-    let connections = Arc::new(RwLock::new(HashMap::new()));
+    let connections = state.connections;
 
     // Multiple producer, single-consumer FIFO queue. Messages added to receive_channel_out will
     // appear in receive_channel_in.
-    let (receive_channel_out, receive_channel_in) = mpsc::unbounded();
+    let receive_channel_out = state.receive_channel_out;
+
+    let topic = state.topic;
 
     // We must clone the connections into connections_inner so that when it is captured by the
     // move closure, we still have the connections for use outside. We will see this pattern
@@ -78,11 +79,7 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str, topic: &str) {
         .map_err(|_| {});
 
     // Create a Kafka producer for use when sending messages from websocket clients.
-    let producer = ClientConfig::new()
-        .set("bootstrap.servers", brokers)
-        .set("produce.offset.report", "true")
-        .create::<FutureProducer<_>>()
-        .expect("Producer creation error");
+    let producer = state.producer;
 
     let connections_inner = connections.clone();
     let remote_inner = remote.clone();
@@ -143,7 +140,7 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str, topic: &str) {
         })
     });
 
-    let (send_channel_out, send_channel_in) = mpsc::unbounded();
+    let send_channel_out = state.send_channel_out;
 
     let connections_inner = connections.clone();
     let send_handler = cpu_pool.spawn_fn(move || {
@@ -166,17 +163,6 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str, topic: &str) {
             Ok(())
         })
     }).map_err(|_| ());
-
-    let consumer = ClientConfig::new()
-        .set("group.id", group)
-        .set("bootstrap.servers", brokers)
-        .set("enable.partition.eof", "false")
-        .set("session.timeout.ms", "6000")
-        .set("enable.auto.commit", "false")
-        .create::<StreamConsumer<_>>()
-        .expect("Consumer creation failed");
-
-    consumer.subscribe(&[topic]).expect("Can't subscribe to topic");
 
     let connections_inner = connections.clone();
     let remote_inner = remote.clone();
