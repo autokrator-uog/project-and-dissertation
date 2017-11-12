@@ -2,7 +2,6 @@ use futures::sync::mpsc::{unbounded, UnboundedSender, UnboundedReceiver};
 use futures::stream::{SplitSink, SplitStream};
 
 use tokio_core::net::TcpStream;
-use tokio_core::reactor::{Core, Remote};
 
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -35,8 +34,6 @@ pub struct ServerState {
 /// amount of lines of code that are moving state around.
 #[derive(Clone)]
 pub struct EventLoopState {
-    pub remote: Remote,
-
     pub connections: Arc<RwLock<HashMap<String, WebSocketSink>>>,
 
     pub receive_channel_out: UnboundedSender<(String, WebSocketStream)>,
@@ -49,14 +46,13 @@ pub struct EventLoopState {
 
 impl ServerState {
     /// This function creates all of the required state for the server.
-    pub fn new(core: &Core, brokers: &str, group: &str, topic: &str) -> Self {
+    pub fn new(brokers: &str, group: &str, topic: &str) -> Self {
         // Multiple producer, single-consumer FIFO queue. Messages added to receive_channel_out will
         // appear in receive_channel_in.
         let (receive_channel_out, receive_channel_in) = unbounded();
         let (send_channel_out, send_channel_in) = unbounded();
 
-        let state = EventLoopState::new(core, brokers, topic,
-                                        receive_channel_out, send_channel_out);
+        let state = EventLoopState::new(brokers, topic, receive_channel_out, send_channel_out);
         let consumer = ClientConfig::new()
             .set("bootstrap.servers", brokers)
             .set("group.id", group)
@@ -78,7 +74,7 @@ impl ServerState {
 
 impl EventLoopState {
     /// This function creates all of the clonable state required for the event loop.
-    fn new(core: &Core, brokers: &str, topic: &str,
+    fn new(brokers: &str, topic: &str,
            receive_channel_out: UnboundedSender<(String, WebSocketStream)>,
            send_channel_out: UnboundedSender<(String, String)>) -> Self {
         // Create a Kafka producer for use when sending messages from websocket clients.
@@ -89,7 +85,6 @@ impl EventLoopState {
             .expect("Producer creation error");
 
         Self {
-            remote: core.remote(),
             connections: Arc::new(RwLock::new(HashMap::new())),
             receive_channel_out: receive_channel_out,
             send_channel_out: send_channel_out,
