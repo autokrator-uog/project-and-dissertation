@@ -3,6 +3,8 @@ use futures::sync::mpsc;
 use futures_cpupool::CpuPool;
 use tokio_core::reactor::{Handle, Core};
 
+use producer;
+
 use std::str::from_utf8;
 use std::collections::HashMap;
 use std::sync::{RwLock, Arc};
@@ -19,8 +21,7 @@ use websocket::message::OwnedMessage;
 use websocket::async::Server;
 use websocket::server::InvalidConnection;
 
-pub fn bootstrap(bind: &str, brokers: &str, group: &str,
-                 input: &str, output: &str) {
+pub fn bootstrap(bind: &str, brokers: &str, group: &str, topic: &str) {
     // Create our event loop.
     let mut core = Core::new().expect("Failed to create Tokio event loop");
 
@@ -85,7 +86,7 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str,
 
     let connections_inner = connections.clone();
     let remote_inner = remote.clone();
-    let output_inner = output.to_string();
+    let topic_inner = topic.to_string();
     let producer_inner = producer.clone();
 
     // Spawn a handler for outgoing clients so that this doesn't block the main thread.
@@ -94,7 +95,7 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str,
             let connections_inner = connections_inner.clone();
             let remote_inner = remote_inner.clone();
             let remote_inner2 = remote_inner.clone();
-            let output_inner = output_inner.clone();
+            let topic_inner = topic_inner.clone();
             let producer_inner = producer_inner.clone();
 
             // For each client, spawn a new thread that will process everything we receive from
@@ -102,14 +103,16 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str,
             remote_inner.spawn(move |_| {
                 let connections_inner = connections_inner.clone();
                 let remote_inner = remote_inner2.clone();
-                let output_inner = output_inner.clone();
+                let topic_inner = topic_inner.clone();
                 let producer_inner = producer_inner.clone();
+                let addr_inner = addr.clone();
 
                 stream.for_each(move |msg| {
                     let connections_inner = connections_inner.clone();
                     let remote_inner = remote_inner.clone();
-                    let output_inner = output_inner.clone();
+                    let topic_inner = topic_inner.clone();
                     let producer_inner = producer_inner.clone();
+                    let addr_inner = addr_inner.clone();
 
                     // Process the message we just got by forwarding on to Kafka.
                     let converted = match msg {
@@ -123,10 +126,12 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str,
                     };
 
                     if let Some(message_as_string) = converted {
+                        let message = producer::process_incoming(addr_inner, message_as_string);
+
                         remote_inner.spawn(move |_| {
-                            info!("Sending {:?} to topic {:?}", output_inner, message_as_string);
+                            info!("Sending {:?} to topic {:?}", topic_inner, message);
                             producer_inner.send_copy::<String, ()>(
-                                &output_inner, None, Some(&message_as_string),
+                                &topic_inner, None, Some(&message.unwrap()),
                                 None, None, 1000);
                             Ok(())
                         });
@@ -171,12 +176,11 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str,
         .create::<StreamConsumer<_>>()
         .expect("Consumer creation failed");
 
-    consumer.subscribe(&[input]).expect("Can't subscribe to topic");
+    consumer.subscribe(&[topic]).expect("Can't subscribe to topic");
 
     let connections_inner = connections.clone();
     let remote_inner = remote.clone();
     let channel = send_channel_out.clone();
-    let input_inner = input.to_string();
 
     let consumer_handler = consumer.start().filter_map(|result| {
         match result {
@@ -187,28 +191,32 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str,
             }
         }
     }).for_each(move |msg| {
-        let input_inner = input_inner.clone();
-        let connections_inner = connections_inner.clone();
-        let channel = channel.clone();
         let owned_message = msg.detach();
+        let message_as_string = from_utf8(&owned_message.payload().unwrap()).unwrap();
 
-        remote_inner.spawn(move |handle| {
-            let channel = channel.clone();
+        if let Ok(parsed_message) = producer::parse_message(message_as_string.to_string()) {
             let connections_inner = connections_inner.clone();
-            let input_inner = input_inner.clone();
+            let channel = channel.clone();
 
-            for (addr, _) in connections_inner.read().unwrap().iter() {
-                let channel_inner = channel.clone();
-                let input_inner = input_inner.clone();
+            remote_inner.spawn(move |handle| {
+                let channel = channel.clone();
+                let connections_inner = connections_inner.clone();
+                let parsed_message_inner = parsed_message.clone();
 
-                let message_as_string = from_utf8(&owned_message.payload().unwrap()).unwrap();
-                info!("Got {:?} from Kafka on topic {:?}, forwarding to {:?}", message_as_string,
-                      input_inner, addr);
-                let f = channel_inner.send((addr.to_string(), message_as_string.to_string()));
-                spawn_future(f, "Send message to write handler", handle);
-            }
-            Ok(())
-        });
+                for (addr, _) in connections_inner.read().unwrap().iter() {
+                    let channel_inner = channel.clone();
+                    let parsed_message_inner = parsed_message_inner.clone();
+
+                    if let Some(processed_message) = producer::process_outgoing(parsed_message_inner, addr) {
+                        let f = channel_inner.send((addr.to_string(), processed_message));
+                        spawn_future(f, "Send message to write handler", handle);
+                    }
+                }
+
+                Ok(())
+            });
+        }
+
         Ok(())
     });
 

@@ -8,10 +8,15 @@ extern crate futures;
 extern crate futures_cpupool;
 extern crate tokio_core;
 
+extern crate serde;
+extern crate serde_json;
+#[macro_use] extern crate serde_derive;
+
 extern crate rdkafka;
 extern crate websocket;
 
 mod server;
+mod producer;
 
 use colored::*;
 use clap::{Arg, ArgMatches, App, AppSettings, SubCommand};
@@ -53,16 +58,10 @@ fn main() {
                     .about("Start the event bus daemon")
                     .version(crate_version!())
                     .author(crate_authors!())
-                    .arg(Arg::with_name("input-topic")
-                         .short("i")
-                         .long("input")
-                         .help("Input topic")
-                         .required(true)
-                         .takes_value(true))
-                    .arg(Arg::with_name("output-topic")
-                         .short("o")
-                         .long("output")
-                         .help("Output topic")
+                    .arg(Arg::with_name("topic")
+                         .short("t")
+                         .long("topic")
+                         .help("Topic to send and receive messages on")
                          .required(true)
                          .takes_value(true))
         ).get_matches();
@@ -74,11 +73,9 @@ fn main() {
             let bind = matches.value_of("bind").unwrap();
             let brokers = matches.value_of("brokers").unwrap();
             let group = matches.value_of("group").unwrap();
+            let topic = sub.value_of("topic").unwrap();
 
-            let input = sub.value_of("input-topic").unwrap();
-            let output = sub.value_of("output-topic").unwrap();
-
-            bootstrap(bind, brokers, group, input, output);
+            bootstrap(bind, brokers, group, topic);
         },
         _ => { }
     };
