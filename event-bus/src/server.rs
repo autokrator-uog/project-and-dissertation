@@ -94,18 +94,17 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str, topic: &str) {
         receive_channel_in.for_each(move |(addr, stream)| {
             let connections_inner = connections_inner.clone();
             let remote_inner = remote_inner.clone();
-            let remote_inner2 = remote_inner.clone();
             let topic_inner = topic_inner.clone();
             let producer_inner = producer_inner.clone();
 
             // For each client, spawn a new thread that will process everything we receive from
             // it.
-            remote_inner.spawn(move |_| {
+            remote_inner.spawn(move |handle| {
                 let connections_inner = connections_inner.clone();
-                let remote_inner = remote_inner2.clone();
                 let topic_inner = topic_inner.clone();
                 let producer_inner = producer_inner.clone();
                 let addr_inner = addr.clone();
+                let remote_inner = handle.remote().clone();
 
                 stream.for_each(move |msg| {
                     let connections_inner = connections_inner.clone();
