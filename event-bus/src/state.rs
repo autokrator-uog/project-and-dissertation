@@ -20,8 +20,21 @@ use websocket::async::MessageCodec;
 type WebSocketSink = SplitSink<Framed<TcpStream, MessageCodec<OwnedMessage>>>;
 type WebSocketStream = SplitStream<Framed<TcpStream, MessageCodec<OwnedMessage>>>;
 
-#[derive(Clone)]
+/// This struct contains all of the non-clonable state that is used within the server.
 pub struct ServerState {
+    pub state: EventLoopState,
+
+    pub receive_channel_in: UnboundedReceiver<(String, WebSocketStream)>,
+    pub send_channel_in: UnboundedReceiver<(String, String)>,
+
+    pub consumer: StreamConsumer<EmptyConsumerContext>
+}
+
+/// This struct contains all of the clonable state that is used within the event loop.
+/// It is intended to be cloned and moved through the move closures in order to reduce the
+/// amount of lines of code that are moving state around.
+#[derive(Clone)]
+pub struct EventLoopState {
     pub remote: Remote,
 
     pub connections: Arc<RwLock<HashMap<String, WebSocketSink>>>,
@@ -35,17 +48,15 @@ pub struct ServerState {
 }
 
 impl ServerState {
-    pub fn create(core: &Core, brokers: &str, group: &str, topic: &str)
-        -> (ServerState,
-            UnboundedReceiver<(String, WebSocketStream)>,
-            UnboundedReceiver<(String, String)>,
-            StreamConsumer<EmptyConsumerContext>) {
+    /// This function creates all of the required state for the server.
+    pub fn new(core: &Core, brokers: &str, group: &str, topic: &str) -> Self {
         // Multiple producer, single-consumer FIFO queue. Messages added to receive_channel_out will
         // appear in receive_channel_in.
         let (receive_channel_out, receive_channel_in) = unbounded();
         let (send_channel_out, send_channel_in) = unbounded();
 
-        let state = Self::new(core, brokers, topic, receive_channel_out, send_channel_out);
+        let state = EventLoopState::new(core, brokers, topic,
+                                        receive_channel_out, send_channel_out);
         let consumer = ClientConfig::new()
             .set("bootstrap.servers", brokers)
             .set("group.id", group)
@@ -56,13 +67,20 @@ impl ServerState {
             .expect("Consumer creation error");
         consumer.subscribe(&[topic]).expect("Can't subscribe to specified topic");
 
-        (state, receive_channel_in, send_channel_in, consumer)
+        Self {
+            state: state,
+            receive_channel_in: receive_channel_in,
+            send_channel_in: send_channel_in,
+            consumer: consumer,
+        }
     }
+}
 
+impl EventLoopState {
+    /// This function creates all of the clonable state required for the event loop.
     fn new(core: &Core, brokers: &str, topic: &str,
            receive_channel_out: UnboundedSender<(String, WebSocketStream)>,
-           send_channel_out: UnboundedSender<(String, String)>) -> ServerState {
-
+           send_channel_out: UnboundedSender<(String, String)>) -> Self {
         // Create a Kafka producer for use when sending messages from websocket clients.
         let producer = ClientConfig::new()
             .set("bootstrap.servers", brokers)
@@ -70,7 +88,7 @@ impl ServerState {
             .create::<FutureProducer<_>>()
             .expect("Producer creation error");
 
-        ServerState {
+        Self {
             remote: core.remote(),
             connections: Arc::new(RwLock::new(HashMap::new())),
             receive_channel_out: receive_channel_out,

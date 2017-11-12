@@ -23,8 +23,8 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str, topic: &str) {
     // Create a handle for spawning futures from the main thread.
     let handle = core.handle();
 
-    let (state, receive_channel_in, send_channel_in, consumer) = ServerState::create(
-        &core, brokers, group, topic);
+    let server_state = ServerState::new(&core, brokers, group, topic);
+    let ServerState { state, receive_channel_in, send_channel_in, consumer } = server_state;
 
     // Create a remote for spawning futures from outside the main thread.
     let remote = state.remote;
