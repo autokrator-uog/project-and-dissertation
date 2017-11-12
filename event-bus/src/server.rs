@@ -118,6 +118,7 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str, topic: &str) {
                         OwnedMessage::Binary(bytes) => Some(from_utf8(&bytes).unwrap().to_string()),
                         OwnedMessage::Text(message) => Some(message),
                         OwnedMessage::Close(_) => {
+                            info!("Removing connection {:?} from clients", &addr);
                             connections_inner.write().unwrap().remove(&addr);
                             None
                         },
