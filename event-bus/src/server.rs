@@ -43,6 +43,9 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str,
     // appear in receive_channel_in.
     let (receive_channel_out, receive_channel_in) = mpsc::unbounded();
 
+    // We must clone the connections into connections_inner so that when it is captured by the
+    // move closure, we still have the connections for use outside. We will see this pattern
+    // throughout.
     let connections_inner = connections.clone();
     let connection_handler = server.incoming()
         .map_err(|InvalidConnection { error, .. }| error)
@@ -84,6 +87,7 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str,
     let remote_inner = remote.clone();
     let output_inner = output.to_string();
     let producer_inner = producer.clone();
+
     // Spawn a handler for outgoing clients so that this doesn't block the main thread.
     let receive_handler = cpu_pool.spawn_fn(|| {
         receive_channel_in.for_each(move |(addr, stream)| {
@@ -92,6 +96,7 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str,
             let remote_inner2 = remote_inner.clone();
             let output_inner = output_inner.clone();
             let producer_inner = producer_inner.clone();
+
             // For each client, spawn a new thread that will process everything we receive from
             // it.
             remote_inner.spawn(move |_| {
@@ -99,11 +104,13 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str,
                 let remote_inner = remote_inner2.clone();
                 let output_inner = output_inner.clone();
                 let producer_inner = producer_inner.clone();
+
                 stream.for_each(move |msg| {
                     let connections_inner = connections_inner.clone();
                     let remote_inner = remote_inner.clone();
                     let output_inner = output_inner.clone();
                     let producer_inner = producer_inner.clone();
+
                     // Process the message we just got by forwarding on to Kafka.
                     let converted = match msg {
                         OwnedMessage::Binary(bytes) => Some(from_utf8(&bytes).unwrap().to_string()),
@@ -118,8 +125,9 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str,
                     if let Some(message_as_string) = converted {
                         remote_inner.spawn(move |_| {
                             info!("Sending {:?} to topic {:?}", output_inner, message_as_string);
-                            producer_inner.send_copy::<String, ()>(&output_inner, None, Some(&message_as_string),
-                                               None, None, 1000);
+                            producer_inner.send_copy::<String, ()>(
+                                &output_inner, None, Some(&message_as_string),
+                                None, None, 1000);
                             Ok(())
                         });
                     }
@@ -169,6 +177,7 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str,
     let remote_inner = remote.clone();
     let channel = send_channel_out.clone();
     let input_inner = input.to_string();
+
     let consumer_handler = consumer.start().filter_map(|result| {
         match result {
             Ok(msg) => Some(msg),
