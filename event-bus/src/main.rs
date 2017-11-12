@@ -9,16 +9,15 @@ extern crate futures_cpupool;
 extern crate tokio_core;
 
 extern crate rdkafka;
+extern crate websocket;
 
-mod context;
 mod server;
 
 use colored::*;
 use clap::{Arg, ArgMatches, App, AppSettings, SubCommand};
 use log::{LogLevel, LogLevelFilter};
 
-use context::Context;
-use server::bootstrap_server;
+use server::bootstrap;
 
 fn main() {
     let matches = App::new(crate_name!())
@@ -26,8 +25,13 @@ fn main() {
         .version(crate_version!())
         .author(crate_authors!())
         .about(crate_description!())
-        .arg(Arg::with_name("brokers")
+        .arg(Arg::with_name("bind")
              .short("b")
+             .long("bind")
+             .help("Host and port to bind websocket server to")
+             .default_value("localhost:8081")
+             .takes_value(true))
+        .arg(Arg::with_name("brokers")
              .long("broker")
              .help("Broker list in Kafka format")
              .default_value("localhost:9092")
@@ -67,7 +71,14 @@ fn main() {
 
     match matches.subcommand() {
         ("server", Some(sub)) => {
-            bootstrap_server(Context::new(&matches, &sub));
+            let bind = matches.value_of("bind").unwrap();
+            let brokers = matches.value_of("brokers").unwrap();
+            let group = matches.value_of("group").unwrap();
+
+            let input = sub.value_of("input-topic").unwrap();
+            let output = sub.value_of("output-topic").unwrap();
+
+            bootstrap(bind, brokers, group, input, output);
         },
         _ => { }
     };
