@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <title>Hello, world!</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    </head>
+    <body>
+        <h1 id="status">Hello.</h1>
+        <input type="number" id="account_number_to_send" placeholder="Account ID of recipient" name="account_number_to_send">
+        <input type="number" id="balance_to_send" name="balance_to_send" placeholder="Amount to send">
+        <button id="submit">Submit</button>
+        <ul id="transaction_list">
+        </ul>
+        <script>
+            function getRandomArbitrary(min, max) {
+                min = Math.ceil(min);
+                max = Math.floor(max);
+                return Math.floor(Math.random() * (max - min)) + min;
+            }
+
+            function addMessage(content) {
+                var transactionListElement = document.querySelectorAll('#transaction_list')[0];
+                var transactionElement = document.createElement('li');
+                var message = document.createTextNode(content);
+                transactionElement.appendChild(message);
+                transactionListElement.appendChild(transactionElement);
+            }
+
+            function updateStatus() {
+                var statusElement = document.querySelectorAll("#status")[0];
+                statusElement.innerText = "Your account id is " + accountId + " and balance is " + balance + " units";
+            }
+
+            var balance = 10, accountId = getRandomArbitrary(1, 10);
+            var ws = new WebSocket("ws://127.0.0.1:8081/");
+            var submitElement = document.querySelectorAll("#submit")[0];
+
+            addMessage("Added initial " + balance + " units");
+            updateStatus();
+
+            ws.onmessage = function (event) {
+                var message = JSON.parse(event.data);
+                var data = JSON.parse(message.data);
+                if (data.accountId === accountId) {
+                    balance += data.payment;
+                    addMessage("Got " + data.payment + " units from " + data.from);
+                    updateStatus();
+                }
+            };
+            submitElement.onclick = function() {
+                var accountIdElement = document.querySelectorAll("#account_number_to_send")[0];
+                var balanceElement = document.querySelectorAll("#balance_to_send")[0];
+
+                var message = {
+                    from: accountId,
+                    accountId: parseInt(accountIdElement.value),
+                    payment: parseInt(balanceElement.value)
+                };
+
+                console.log(message);
+
+                ws.send(JSON.stringify(message));
+                balance = balance - message.payment;
+                addMessage("Sent " + message.payment + " units to " + message.accountId);
+                updateStatus();
+            };
+        </script>
+    </body>
+</html>
