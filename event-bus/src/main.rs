@@ -18,6 +18,8 @@ extern crate websocket;
 mod server;
 mod state;
 mod producer;
+mod consumer;
+mod common;
 
 use colored::*;
 use clap::{Arg, ArgMatches, App, AppSettings, SubCommand};
