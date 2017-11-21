@@ -14,7 +14,7 @@ use rdkafka::producer::FutureProducer;
 use websocket::message::OwnedMessage;
 
 pub trait Message {
-    fn process(&self, producer: FutureProducer<EmptyContext>, topic: String);
+    fn process(&self, addr: String, producer: FutureProducer<EmptyContext>, topic: String);
 }
 
 /// Process a message that is received from a WebSocket connection.

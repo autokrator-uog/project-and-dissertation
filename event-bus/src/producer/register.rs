@@ -8,7 +8,7 @@ pub struct RegisterMessage {
 }
 
 impl Message for RegisterMessage {
-    fn process(&self, _producer: FutureProducer<EmptyContext>, _topic: String) {
+    fn process(&self, _addr: String, _producer: FutureProducer<EmptyContext>, _topic: String) {
         unimplemented!();
     }
 }

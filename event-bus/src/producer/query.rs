@@ -6,11 +6,10 @@ use producer::Message;
 pub struct QueryMessage {
     pub event_types: Vec<String>,
     pub date: String,
-    pub addr: String,
 }
 
 impl Message for QueryMessage {
-    fn process(&self, _producer: FutureProducer<EmptyContext>, _topic: String) {
+    fn process(&self, _addr: String, _producer: FutureProducer<EmptyContext>, _topic: String) {
         unimplemented!();
     }
 }

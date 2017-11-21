@@ -1,6 +1,7 @@
 use producer::Message;
 use common::{Event, EventContents};
 
+use chrono::Local;
 use serde_json::to_string;
 
 use rdkafka::client::EmptyContext;
@@ -15,16 +16,14 @@ pub struct NewEvent {
 #[derive(Serialize, Deserialize)]
 pub struct NewEventMessage {
     pub events: Vec<NewEvent>,
-    pub timestamp: String,
-    pub addr: String,
 }
 
 impl Message for NewEventMessage {
-    fn process(&self, producer: FutureProducer<EmptyContext>, topic: String) {
+    fn process(&self, addr: String, producer: FutureProducer<EmptyContext>, topic: String) {
         for raw_event in self.events.iter() {
             let event = Event {
-                timestamp: self.timestamp.clone(),
-                addr: self.addr.clone(),
+                timestamp: Local::now().to_rfc2822(),
+                addr: addr.clone(),
                 event_type: raw_event.event_type.clone(),
                 data: raw_event.data.clone()
             };
