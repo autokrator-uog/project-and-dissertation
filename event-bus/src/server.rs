@@ -88,29 +88,17 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str, topic: &str) {
                     let remote = remote.clone();
                     let addr = addr.clone();
 
-                    // Process the message we just got by forwarding on to Kafka.
-                    let converted = match msg {
-                        OwnedMessage::Binary(bytes) => Some(from_utf8(&bytes).unwrap().to_string()),
-                        OwnedMessage::Text(message) => Some(message),
-                        OwnedMessage::Close(_) => {
-                            info!("Removing connection {:?} from clients", &addr);
-                            state.connections.write().unwrap().remove(&addr);
-                            None
-                        },
-                        _ => None
-                    };
-
-                    if let Some(converted_message) = converted {
-                        let message = producer::process_incoming(addr, converted_message);
-
+                    if let OwnedMessage::Close(_) = msg {
+                        info!("Removing connection {:?} from clients", &addr);
+                        state.connections.write().unwrap().remove(&addr);
+                    } else {
                         remote.spawn(move |_| {
-                            info!("Sending {:?} to topic {:?}", state.topic, message);
-                            state.producer.send_copy::<String, ()>(
-                                &state.topic, None, Some(&message.unwrap()),
-                                None, None, 1000);
+                            let parsed_message = producer::parse_message(msg);
+                            parsed_message.process(state.producer, state.topic);
                             Ok(())
                         });
                     }
+
                     Ok(())
                 }).map_err(|_| ())
             });
@@ -159,31 +147,30 @@ pub fn bootstrap(bind: &str, brokers: &str, group: &str, topic: &str) {
         let message_as_string = from_utf8(&owned_message.payload().unwrap()).unwrap();
 
         // Parse the message.
-        if let Ok(parsed_message) = consumer::parse_message(message_as_string.to_string()) {
-            let state = state_inner.clone();
-            let remote = remote_inner.clone();
+        let parsed_message = consumer::parse_message(message_as_string.to_string());
+        let state = state_inner.clone();
+        let remote = remote_inner.clone();
 
-            // Spawn a thread to send it to all clients.
-            remote.spawn(move |handle| {
+        // Spawn a thread to send it to all clients.
+        remote.spawn(move |handle| {
+            let state = state.clone();
+            let parsed_message_inner = parsed_message.clone();
+
+            // Loop over the clients.
+            for (addr, _) in state.connections.read().unwrap().iter() {
                 let state = state.clone();
-                let parsed_message_inner = parsed_message.clone();
+                let parsed_message_inner = parsed_message_inner.clone();
 
-                // Loop over the clients.
-                for (addr, _) in state.connections.read().unwrap().iter() {
-                    let state = state.clone();
-                    let parsed_message_inner = parsed_message_inner.clone();
-
-                    // If we decide to send the message, add it to the outgoing queue.
-                    if let Some(processed_message) = consumer::process_outgoing(
-                            parsed_message_inner, addr) {
-                        let f = state.send_channel_out.send((addr.to_string(), processed_message));
-                        spawn_future(f, "Send message to write handler", handle);
-                    }
+                // If we decide to send the message, add it to the outgoing queue.
+                if let Some(processed_message) = consumer::process_event(
+                        parsed_message_inner, addr) {
+                    let f = state.send_channel_out.send((addr.to_string(), processed_message));
+                    spawn_future(f, "Send message to write handler", handle);
                 }
+            }
 
-                Ok(())
-            });
-        }
+            Ok(())
+        });
 
         Ok(())
     });

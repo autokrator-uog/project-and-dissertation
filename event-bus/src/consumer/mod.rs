@@ -1,26 +1,25 @@
 use serde_json::{from_str, to_string};
-use common::Message;
+use common::Event;
 
 /// Parse a message from Kafka.
 ///
 /// If `None` is returned, it will not be sent to any WebSocket clients.
-pub fn parse_message(raw_message: String) -> Result<Message, ()> {
-    let message = from_str(&raw_message);
-
+pub fn parse_message(raw_message: String) -> Event {
     info!("Parsing message from Kafka: {:?}", raw_message);
 
-    message.map_err(|_| error!("Error parsing {:?}", raw_message))
+    let event: Result<Event, _> = from_str(&raw_message);
+    event.unwrap()
 }
 
 /// Decide whether a message should be sent to a client.
 ///
 /// If `None` is returned, it will not be sent to any WebSocket clients.
-pub fn process_outgoing(message: Message, to: &str) -> Option<String> {
+pub fn process_event(event: Event, to: &str) -> Option<String> {
     // Don't send a event back to the original author.
-    if message.from == to {
+    if event.addr == to {
         None
     } else {
-        info!("Sending message to {:?}: {:?}", to, message.data);
-        Some(to_string(&message).unwrap())
+        info!("Sending message to {:?}: {:?}", to, event.data);
+        Some(to_string(&event).unwrap())
     }
 }

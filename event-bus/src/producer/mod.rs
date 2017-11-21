@@ -1,23 +1,47 @@
-use chrono::Local;
-use serde_json::to_string;
-use common::Message;
+mod new;
+mod query;
+mod register;
 
-/// Process a message that is received from a WebSocket connection.
-///
-/// If `None` is returned, then the message is not sent to Kafka.
-pub fn process_incoming(from: String, message: String) -> Option<String> {
-    let now = Local::now();
+use self::new::NewEventMessage;
+use self::query::QueryMessage;
+use self::register::RegisterMessage;
 
-    let constructed_message = Message {
-        timestamp: now.to_rfc2822(),
-        from: from,
-        data: message
-    };
+use std::str::from_utf8;
+use serde_json::{from_str, Value};
 
-    info!("Received message on {:?} from {:?} containing: {:?}",
-          constructed_message.timestamp, constructed_message.from,
-          constructed_message.data);
+use rdkafka::client::EmptyContext;
+use rdkafka::producer::FutureProducer;
+use websocket::message::OwnedMessage;
 
-    Some(to_string(&constructed_message).unwrap())
+pub trait Message {
+    fn process(&self, producer: FutureProducer<EmptyContext>, topic: String);
 }
 
+/// Process a message that is received from a WebSocket connection.
+pub fn parse_message(incoming_message: OwnedMessage) -> Box<Message> {
+    // Process the message we just got by forwarding on to Kafka.
+    let converted_message = match incoming_message {
+        OwnedMessage::Binary(bytes) => Ok(from_utf8(&bytes).unwrap().to_string()),
+        OwnedMessage::Text(message) => Ok(message),
+        _ => Err(())
+    }.unwrap();
+
+    let parsed_message: Value = from_str(&converted_message).unwrap();
+    let message_type = parsed_message["type"].as_str().unwrap();
+
+    match message_type {
+        "query" => {
+            let event: QueryMessage = from_str(&converted_message).unwrap();
+            Box::new(event)
+        },
+        "new" => {
+            let event: NewEventMessage = from_str(&converted_message).unwrap();
+            Box::new(event)
+        },
+        "register" => {
+            let event: RegisterMessage = from_str(&converted_message).unwrap();
+            Box::new(event)
+        },
+        _ => panic!("Invalid message type")
+    }
+}
