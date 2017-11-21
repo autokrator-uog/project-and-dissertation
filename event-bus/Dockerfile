@@ -5,6 +5,6 @@ COPY . .
 
 RUN cargo install
 
-ENV LOG_LEVEL DEBUG
+ENV LOG_LEVEL debug
 
 CMD event-bus --broker $BROKER -g $GROUP -l $LOG_LEVEL server -t $TOPIC
