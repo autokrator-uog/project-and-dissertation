@@ -1,23 +1,20 @@
-SED-DEV Project
-===============
+# SED-DEV Project
 
 This is the main repository for the SED-DEV project for Avaloq.
 
 We are making an Event Sourcing system based around Apache Kafka.
 
 
-
-# Setting up with `docker-compose`
+## Setting up with docker-compose
 
 1. Ensure you have docker correctly installed.
 
-2. `docker-compose up --build -d`
-This may take a while to pull in dependencies and build an image (from scratch, could be 10+ minutes).
+2. `docker-compose up --build -d` This may take a while to pull in dependencies and build an image (from scratch, could be 10+ minutes).
 
 3. Set up Couchbase: http://localhost:8091
   - Cluster name `couchbase.db`, user `connect`, pass `connect`
   - accept license terms
-  - go to advanced options and in server name enter `couchbase.db` *THIS IS IMPORTANT*, otherwise connect won't be able to resolve Couchbase.
+  - go to advanced options and in server name enter `couchbase.db` **THIS IS IMPORTANT**, otherwise connect won't be able to resolve Couchbase.
   - you may have to change some memory reservation sizes etc.
   - once in to the main GUI console, go to buckets and create bucket called `events`
 
@@ -26,5 +23,7 @@ This may take a while to pull in dependencies and build an image (from scratch, 
 5. Tail logs, check for any errors `docker-compose logs -f`
 
 6. Install `kt` (https://github.com/fgeller/kt) and produce an event:
-    - echo '{ "key": "HelloEvent1234123", "value": "MyWeirdEvent", "partition": 0 }' | kt produce -topic events -brokers kafka:9092 -timeout 1s
+    - `echo '{ "key": "HelloEvent1234123", "value": "MyWeirdEvent", "partition": 0 }' | kt produce -topic events -brokers kafka:9092 -timeout 1s`
     - (you may have to add `127.0.0.1 kafka` to your /etc/hosts file)
+
+7. Check the Couchbase bucket documents to see if the event has been persisted.
