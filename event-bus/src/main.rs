@@ -65,7 +65,7 @@ fn main() {
                          .short("t")
                          .long("topic")
                          .help("Topic to send and receive messages on")
-                         .required(true)
+                         .default_value("sed-instance-1")
                          .takes_value(true))
         ).get_matches();
 
