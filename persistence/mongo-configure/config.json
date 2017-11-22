@@ -1,0 +1,15 @@
+{
+  "name": "mongodb-sink-connector",
+  "config": {
+    "connector.class":"org.apache.kafka.connect.mongodb.MongodbSinkConnector",
+    "tasks.max":"1",
+
+    "uri":"mongodb://mongo:27017",
+    "mongodb.database": "kafkastore",
+    "mongodb.collections": "events",
+    "bulk.size":"100",
+    "converter.class": "org.apache.kafka.connect.mongodb.converter.JsonStructConverter",
+
+    "topics":"events"
+  }
+}
