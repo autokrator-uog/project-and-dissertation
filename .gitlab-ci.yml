@@ -36,8 +36,6 @@ build_event_bus:
     - docker build -t $EVENT_BUS_IMAGE_TAG .
     # - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $REGISTRY
     # - docker push $EVENT_BUS_IMAGE_TAG
-  only:
-    - master
   tags:
     - docker
 
@@ -51,8 +49,6 @@ build_kafka_connect:
     - docker build -t $KAFKA_CONNECT_IMAGE_TAG .
     # - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $REGISTRY
     # - docker push $KAFKA_CONNECT_IMAGE_TAG
-  only:
-    - master
   tags:
     - docker
 
