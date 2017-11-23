@@ -1,8 +1,8 @@
 
 variables:
   REGISTRY: sed-team-project
-  EVENT_BUS_IMAGE_TAG: $REGISTRY/SED-DEV-group/SED-DEV-project:event-bus-$CI_PIPELINE_ID
-  KAFKA_CONNECT_IMAGE_TAG: $REGISTRY/SED-DEV-group/SED-DEV-project:kafka-connect-$CI_PIPELINE_ID
+  EVENT_BUS_IMAGE_TAG: $REGISTRY/sed-dev-project:event-bus-$CI_PIPELINE_ID
+  KAFKA_CONNECT_IMAGE_TAG: $REGISTRY/sed-dev-project:kafka-connect-$CI_PIPELINE_ID
 
 stages:
   - test
