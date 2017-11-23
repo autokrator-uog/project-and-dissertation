@@ -12,7 +12,8 @@ We are making an Event Sourcing system based around Apache Kafka.
     `docker network create -d bridge --subnet 172.25.0.0/16 thenet`
     `sudo echo "nameserver 127.0.0.11" >> /etc/resolv.conf`
 
-2. `docker-compose up --build -d` This may take a while to pull in dependencies and build an image (from scratch, could be 10+ minutes).
+2. `./run.sh` This may take a while to pull in dependencies and build an image (from scratch, could be 10+ minutes).
+    You can specify the `in_docker` flag to this script to run the event bus as a container within docker.
 
 3. Set up Couchbase: http://localhost:8091
   - Cluster name `couchbase.db`, user `connect`, pass `connect`
