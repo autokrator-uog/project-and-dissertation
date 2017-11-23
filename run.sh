@@ -26,16 +26,30 @@ echo "====> [+] /etc/hosts configured correctly."
 
 
 # give the option to run the event bus in a docker container or not (default).
-echo "====> Starting event bus..."
+echo
+echo
+echo "====> Starting docker-compose..."
 if [ "$1" == 'in_docker' ]; then
     docker-compose -f docker/base.yml -f docker/persistence.yml -f docker/event-bus.yml up --build -d --remove-orphans
 else
     docker-compose -f docker/base.yml -f docker/persistence.yml up --build -d --remove-orphans
 fi
-echo "====> [+] Event bus started"
+echo "====> [+] docker-compose started."
 
+echo
+echo
+echo "====> ....waiting for containers to come online..."
+until [ "$(curl --silent --head --output /dev/stdout couchbase.db:8091 2>&1 | cat -)" != "" ]; do
+    printf '.'
+    sleep 1
+done
+until [ "$(curl --silent --head --output /dev/stdout connect:8083 2>&1 | cat -)" != "" ]; do
+    printf '.'
+    sleep 1
+done
 
-
+echo
+echo
 echo "====> Testing name resolution for containers..."
 set -eE   # set the script to fail if any of the commands return non-zero
 trap 'echo "====> [-] ERROR IN /etc/hosts SET UP!"' ERR
