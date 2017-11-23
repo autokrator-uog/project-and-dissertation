@@ -7,7 +7,10 @@ We are making an Event Sourcing system based around Apache Kafka.
 
 ## Setting up with docker-compose
 
-1. Ensure you have docker correctly installed.
+1. Ensure you have docker correctly installed. Run the following commands to get your host networking set up:
+
+    `docker network create -d bridge --subnet 172.25.0.0/16 thenet`
+    `sudo echo "nameserver 127.0.0.11" >> /etc/resolv.conf`
 
 2. `docker-compose up --build -d` This may take a while to pull in dependencies and build an image (from scratch, could be 10+ minutes).
 
