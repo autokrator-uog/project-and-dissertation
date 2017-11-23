@@ -1,7 +1,65 @@
-image: blang/latex
-build:
+
+variables:
+  REGISTRY: sed-team-project
+  EVENT_BUS_IMAGE_TAG: $REGISTRY/SED-DEV-group/SED-DEV-project:event-bus-$CI_PIPELINE_ID
+  KAFKA_CONNECT_IMAGE_TAG: $REGISTRY/SED-DEV-group/SED-DEV-project:kafka-connect-$CI_PIPELINE_ID
+
+stages:
+  - test
+  - build
+  - deploy
+
+compile_dissertation_latex:
+  image: blang/latex
+  stage: build
   script:
     - latexmk -pdf -cd docs/dissertation/dissertation.tex
   artifacts:
     paths:
       - "*.pdf"
+  only:
+    - master
+
+test_event_bus:
+  image: debian:jessie
+  stage: test
+  script:
+    - echo "Aw darn, there's no tests yet!"
+
+build_event_bus:
+  image: docker:latest
+  stage: build
+  services:
+    - docker:dind
+  script:
+    - cd event-bus
+    - docker build -t $EVENT_BUS_IMAGE_TAG .
+    # - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $REGISTRY
+    # - docker push $EVENT_BUS_IMAGE_TAG
+  only:
+    - master
+  tags:
+    - docker
+
+build_kafka_connect:
+  image: docker:latest
+  stage: build
+  services:
+    - docker:dind
+  script:
+    - cd event-bus
+    - docker build -t $KAFKA_CONNECT_IMAGE_TAG .
+    # - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $REGISTRY
+    # - docker push $KAFKA_CONNECT_IMAGE_TAG
+  only:
+    - master
+  tags:
+    - docker
+
+deploy_to_sed_deploy:
+  image: debian:jessie
+  stage: deploy
+  script:
+    - echo "TODO implement deploying to our server"
+  only:
+    - master
