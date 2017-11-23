@@ -1,6 +1,9 @@
 version: '2.2'
 
 networks:
+  hostnet:
+    external:
+      name: thenet
   persistence:
     driver: bridge
 

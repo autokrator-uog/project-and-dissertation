@@ -1,5 +1,10 @@
 version: '2.2'
 
+networks:
+  hostnet:
+    external:
+      name: thenet
+
 services:
   event-bus:
     build: ../event-bus/
