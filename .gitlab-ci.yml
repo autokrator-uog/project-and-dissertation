@@ -43,7 +43,7 @@ build_kafka_connect:
   services:
     - docker:dind
   script:
-    - cd event-bus
+    - cd persistence/connect-custom
     - docker build -t $KAFKA_CONNECT_IMAGE_TAG .
     # - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $REGISTRY
     # - docker push $KAFKA_CONNECT_IMAGE_TAG
