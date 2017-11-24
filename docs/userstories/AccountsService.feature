@@ -15,6 +15,7 @@ Feature: Accounts Service
       And Bob now has a balance of £30 in his account
       And the accounts service created a ConfirmedCredit event for Bob with amount £30
       And the accounts service created a ConfimredDebit event for Alice with amount £30
+      And the accounts service created an AcceptedTransaction event referencing the PendingTransaction
 
     Scenario: A transaction is requested from Alice to Bob, but Alice does not have enough funds to complete it.
       Given Alice has a balance of £50 in her account
