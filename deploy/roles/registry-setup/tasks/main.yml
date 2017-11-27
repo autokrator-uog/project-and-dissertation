@@ -27,4 +27,9 @@
   tags: restart
 
 - name: Login to docker registry
-  shell: "docker login -u gitlab-ci-token -p {{ registry_password }} sed-team-project:4567"
+  docker_login:
+    username: "gitlab-ci-token"
+    password: "{{ registry_password }}"
+    registry_url: sed-team-project:4567
+    reauthorize: yes
+  become: yes
