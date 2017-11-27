@@ -1,8 +1,8 @@
 
 variables:
   REGISTRY: sed-team-project:4567
-  EVENT_BUS_IMAGE_TAG: $REGISTRY/sed-dev-group/sed-dev-project:event-bus-$CI_PIPELINE_ID
-  KAFKA_CONNECT_IMAGE_TAG: $REGISTRY/sed-dev-group/sed-dev-project:kafka-connect-$CI_PIPELINE_ID
+  REG_EVENT_BUS: $REGISTRY/sed-dev-group/sed-dev-project
+  REG_KAFKA_CONNECT: $REGISTRY/sed-dev-group/sed-dev-project
 
 stages:
   - test
@@ -17,37 +17,37 @@ compile_dissertation_latex:
   artifacts:
     paths:
       - "*.pdf"
-  # only:
-  #   - master
+  only:
+    - master
 
-# test_event_bus:
-#   image: debian:jessie
-#   stage: test
-#   script:
-#     - echo "Aw darn, there's no tests yet!"
-#
-# build_event_bus:
-#   image: docker:latest
-#   stage: build
-#   script:
-#     - cd event-bus
-#     - docker build -t $EVENT_BUS_IMAGE_TAG .
-#     - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY
-#     - docker push $EVENT_BUS_IMAGE_TAG
-#
-# build_kafka_connect:
-#   image: docker:latest
-#   stage: build
-#   script:
-#     - cd persistence/connect-custom
-#     - docker build -t $KAFKA_CONNECT_IMAGE_TAG .
-#     - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY
-#     - docker push $KAFKA_CONNECT_IMAGE_TAG
-#
-# deploy_to_sed_deploy:
-#   image: debian:jessie
-#   stage: deploy
-#   script:
-#     - echo "TODO implement deploying to our server"
-#   only:
-#     - master
+test_event_bus:
+  image: debian:jessie
+  stage: test
+  script:
+    - echo "Aw darn, there's no tests yet!"
+
+build_event_bus:
+  image: docker:latest
+  stage: build
+  script:
+    - cd event-bus
+    - docker build -t $REG_EVENT_BUS:event-bus-$CI_PIPELINE_ID .
+    - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY
+    - docker push $REG_EVENT_BUS:event-bus-$CI_PIPELINE_ID
+
+build_kafka_connect:
+  image: docker:latest
+  stage: build
+  script:
+    - cd persistence/connect-custom
+    - docker build -t $REG_KAFKA_CONNECT:kafka-connect-$CI_PIPELINE_ID .
+    - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY
+    - docker push $REG_KAFKA_CONNECT:kafka-connect-$CI_PIPELINE_ID
+
+deploy_to_sed_deploy:
+  image: debian:jessie
+  stage: deploy
+  script:
+    - echo "TODO implement deploying to our server"
+  only:
+    - master
