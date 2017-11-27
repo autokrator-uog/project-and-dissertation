@@ -1,6 +1,6 @@
 
 variables:
-  REGISTRY_URL: https://sed-team-project:4567
+  REGISTRY_URL: sed-team-project:4567
   REGISTRY: sed-team-project
   EVENT_BUS_IMAGE_TAG: $REGISTRY/sed-dev-project:event-bus-$CI_PIPELINE_ID
   KAFKA_CONNECT_IMAGE_TAG: $REGISTRY/sed-dev-project:kafka-connect-$CI_PIPELINE_ID
