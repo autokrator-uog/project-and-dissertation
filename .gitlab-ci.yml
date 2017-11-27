@@ -68,7 +68,7 @@ tag_production_images:
     - master
 
 deploy_to_sed_deploy:
-  image: gsellix/ansible:2.3.1.0
+  image: williamyeh/ansible:ubuntu16.04
   stage: deploy
   script:
     - cd deploy
