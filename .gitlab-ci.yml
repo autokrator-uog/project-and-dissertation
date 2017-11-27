@@ -29,8 +29,6 @@ test_event_bus:
 build_event_bus:
   image: docker:latest
   stage: build
-  services:
-    - docker:dind
   script:
     - cd event-bus
     - docker build -t $EVENT_BUS_IMAGE_TAG .
@@ -40,8 +38,6 @@ build_event_bus:
 build_kafka_connect:
   image: docker:latest
   stage: build
-  services:
-    - docker:dind
   script:
     - cd persistence/connect-custom
     - docker build -t $KAFKA_CONNECT_IMAGE_TAG .
