@@ -4,9 +4,13 @@ variables:
   REG_EVENT_BUS: $REGISTRY/sed-dev-group/sed-dev-project
   REG_KAFKA_CONNECT: $REGISTRY/sed-dev-group/sed-dev-project
 
+  EVENT_BUS_TAG_THIS_BUILD: $REG_EVENT_BUS:event-bus-$CI_PIPELINE_ID
+  KAFKA_CONNECT_TAG_THIS_BUILD: $REG_KAFKA_CONNECT:kafka-connect-$CI_PIPELINE_ID
+
 stages:
   - test
   - build
+  - publish
   - deploy
 
 compile_dissertation_latex:
@@ -21,28 +25,42 @@ compile_dissertation_latex:
     - master
 
 test_event_bus:
-  image: debian:jessie
+  image: rust:1.21
   stage: test
   script:
-    - echo "Aw darn, there's no tests yet!"
+    - cargo test
 
 build_event_bus:
   image: docker:latest
   stage: build
   script:
     - cd event-bus
-    - docker build -t $REG_EVENT_BUS:event-bus-$CI_PIPELINE_ID .
+    - docker build -t $EVENT_BUS_TAG_THIS_BUILD .
     - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY
-    - docker push $REG_EVENT_BUS:event-bus-$CI_PIPELINE_ID
+    - docker push $EVENT_BUS_TAG_THIS_BUILD
 
 build_kafka_connect:
   image: docker:latest
   stage: build
   script:
     - cd persistence/connect-custom
-    - docker build -t $REG_KAFKA_CONNECT:kafka-connect-$CI_PIPELINE_ID .
+    - docker build -t $KAFKA_CONNECT_TAG_THIS_BUILD .
     - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY
-    - docker push $REG_KAFKA_CONNECT:kafka-connect-$CI_PIPELINE_ID
+    - docker push $KAFKA_CONNECT_TAG_THIS_BUILD
+
+tag_production_images:
+  image: docker:latest
+  stage: publish
+  script:
+    - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY
+
+    - docker pull $EVENT_BUS_TAG_THIS_BUILD
+    - docker tag $EVENT_BUS_TAG_THIS_BUILD $REG_EVENT_BUS:latest
+    - docker push $REG_EVENT_BUS:latest
+
+    - docker pull $KAFKA_CONNECT_TAG_THIS_BUILD
+    - docker tag $KAFKA_CONNECT_TAG_THIS_BUILD $REG_KAFKA_CONNECT:latest
+    - docker push $REG_KAFKA_CONNECT:latest
 
 deploy_to_sed_deploy:
   image: debian:jessie
