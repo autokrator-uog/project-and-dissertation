@@ -76,8 +76,12 @@ echo "======================================="
 if [ "$1" == 'in_docker' ]; then
     echo "EVENT BUS LOGS: "
     docker-compose -f docker/base.yml -f docker/persistence.yml -f docker/event-bus.yml logs -f event-bus
-else
+
+elif [ "$1" == 'run_bus' ]; then
     echo "RUN EVENT BUS:"
     cd event-bus
     cargo run -- "$@"
+
+else
+    echo "====> [+] DEPENDENCIES RUNNING!"
 fi
