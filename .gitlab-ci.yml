@@ -17,37 +17,37 @@ compile_dissertation_latex:
   artifacts:
     paths:
       - "*.pdf"
-  only:
-    - master
+  # only:
+  #   - master
 
-test_event_bus:
-  image: debian:jessie
-  stage: test
-  script:
-    - echo "Aw darn, there's no tests yet!"
-
-build_event_bus:
-  image: docker:latest
-  stage: build
-  script:
-    - cd event-bus
-    - docker build -t $EVENT_BUS_IMAGE_TAG .
-    - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY
-    - docker push $EVENT_BUS_IMAGE_TAG
-
-build_kafka_connect:
-  image: docker:latest
-  stage: build
-  script:
-    - cd persistence/connect-custom
-    - docker build -t $KAFKA_CONNECT_IMAGE_TAG .
-    - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY
-    - docker push $KAFKA_CONNECT_IMAGE_TAG
-
-deploy_to_sed_deploy:
-  image: debian:jessie
-  stage: deploy
-  script:
-    - echo "TODO implement deploying to our server"
-  only:
-    - master
+# test_event_bus:
+#   image: debian:jessie
+#   stage: test
+#   script:
+#     - echo "Aw darn, there's no tests yet!"
+#
+# build_event_bus:
+#   image: docker:latest
+#   stage: build
+#   script:
+#     - cd event-bus
+#     - docker build -t $EVENT_BUS_IMAGE_TAG .
+#     - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY
+#     - docker push $EVENT_BUS_IMAGE_TAG
+#
+# build_kafka_connect:
+#   image: docker:latest
+#   stage: build
+#   script:
+#     - cd persistence/connect-custom
+#     - docker build -t $KAFKA_CONNECT_IMAGE_TAG .
+#     - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY
+#     - docker push $KAFKA_CONNECT_IMAGE_TAG
+#
+# deploy_to_sed_deploy:
+#   image: debian:jessie
+#   stage: deploy
+#   script:
+#     - echo "TODO implement deploying to our server"
+#   only:
+#     - master
