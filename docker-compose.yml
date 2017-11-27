@@ -1,9 +1,6 @@
 version: '2.2'
 
 networks:
-  hostnet:
-    external:
-      name: thenet
   ingress:
     driver: bridge
   kafka-internal:
@@ -33,7 +30,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - hostnet
       - kafka-internal
       - kafka-public
     restart: always
@@ -44,7 +40,6 @@ services:
     ports:
       - "8083:8083"
     networks:
-      - hostnet
       - kafka-public
       - persistence
     command: connect-standalone worker.properties couchbase-sink.properties
@@ -52,7 +47,6 @@ services:
   couchbase.db:
     image: couchbase
     networks:
-      - hostnet
       - persistence
     ports:
       - 8091-8094:8091-8094
@@ -67,6 +61,5 @@ services:
       TOPIC: events
       GROUP: event-bus
     networks:
-      - hostnet
       - ingress
       - kafka-public
