@@ -34,7 +34,7 @@ build_event_bus:
     - docker:dind
   script:
     - cd event-bus
-    - docker build -t $EVENT_BUS_IMAGE_TAG .
+    # - docker build -t $EVENT_BUS_IMAGE_TAG .
     - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY_URL
     - docker push $EVENT_BUS_IMAGE_TAG
 
@@ -45,7 +45,7 @@ build_kafka_connect:
     - docker:dind
   script:
     - cd persistence/connect-custom
-    - docker build -t $KAFKA_CONNECT_IMAGE_TAG .
+    # - docker build -t $KAFKA_CONNECT_IMAGE_TAG .
     - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY_URL
     - docker push $KAFKA_CONNECT_IMAGE_TAG
 
