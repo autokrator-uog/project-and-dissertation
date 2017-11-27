@@ -68,7 +68,7 @@ tag_production_images:
     - master
 
 deploy_to_sed_deploy:
-  image: ansible/ubuntu14.04-ansible:stable
+  image: gsellix/ansible:2.3.1.0
   stage: deploy
   script:
     - cd deploy
