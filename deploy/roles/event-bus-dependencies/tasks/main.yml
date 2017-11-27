@@ -16,6 +16,7 @@
     state: present
     pull: yes
   register: output
+  become: yes
 
 - name: Ensure necessary services are running
   assert:
@@ -24,3 +25,4 @@
       - "kafka.src_kafka_1.state.running"
       - "connect.src_connect_1.state.running"
       - "couchbase.db.src_couchbase.db_1.state.running"
+  become: yes
