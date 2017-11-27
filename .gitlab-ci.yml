@@ -1,6 +1,6 @@
 
 variables:
-  REGISTRY: sed-team-project:4567
+  REGISTRY: https://sed-team-project:4567
   EVENT_BUS_IMAGE_TAG: $REGISTRY/sed-dev-project:event-bus-$CI_PIPELINE_ID
   KAFKA_CONNECT_IMAGE_TAG: $REGISTRY/sed-dev-project:kafka-connect-$CI_PIPELINE_ID
 
@@ -34,7 +34,7 @@ build_event_bus:
   script:
     - cd event-bus
     - docker build -t $EVENT_BUS_IMAGE_TAG .
-    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $REGISTRY
+    - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY
     - docker push $EVENT_BUS_IMAGE_TAG
 
 build_kafka_connect:
@@ -45,7 +45,7 @@ build_kafka_connect:
   script:
     - cd persistence/connect-custom
     - docker build -t $KAFKA_CONNECT_IMAGE_TAG .
-    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $REGISTRY
+    - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY
     - docker push $KAFKA_CONNECT_IMAGE_TAG
 
 deploy_to_sed_deploy:
