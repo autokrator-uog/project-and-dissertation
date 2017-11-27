@@ -30,8 +30,8 @@ test_event_bus:
 build_event_bus:
   image: docker:latest
   stage: build
-  services:
-    - docker:dind
+  # services:
+  #   - docker:dind
   script:
     - cd event-bus
     # - docker build -t $EVENT_BUS_IMAGE_TAG .
