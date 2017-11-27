@@ -28,6 +28,7 @@ test_event_bus:
   image: rust:1.21
   stage: test
   script:
+    - cd event-bus
     - cargo test
 
 build_event_bus:
