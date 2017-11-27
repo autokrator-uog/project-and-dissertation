@@ -28,7 +28,7 @@
 
 - name: Login to docker registry
   docker_login:
-    username: gitlab-ci-token
+    username: "gitlab-ci-token"
     password: "{{ registry_password }}"
-    registry: sed-team-project:4567
+    registry_url: sed-team-project:4567
     reauthorize: yes
