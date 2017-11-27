@@ -57,11 +57,11 @@ tag_production_images:
     - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY
 
     - docker pull $EVENT_BUS_TAG_THIS_BUILD
-    - docker tag $EVENT_BUS_TAG_THIS_BUILD $REG_EVENT_BUS:latest
+    - docker tag $EVENT_BUS_TAG_THIS_BUILD $REG_EVENT_BUS
     - docker push $REG_EVENT_BUS
 
     - docker pull $KAFKA_CONNECT_TAG_THIS_BUILD
-    - docker tag $KAFKA_CONNECT_TAG_THIS_BUILD $REG_KAFKA_CONNECT:latest
+    - docker tag $KAFKA_CONNECT_TAG_THIS_BUILD $REG_KAFKA_CONNECT
     - docker push $REG_KAFKA_CONNECT
   only:
     - ci # temp, for testing
