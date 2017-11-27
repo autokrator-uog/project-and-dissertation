@@ -73,7 +73,7 @@ deploy_to_sed_deploy:
   script:
     - cd deploy
     - ansible-galaxy install angstwad.docker_ubuntu
-    - ansible-playbook -i inventory playbook.yml --user gitlab-ci --extra-vars "ansible_pass=$DEPLOY_USER_PASSWORD ansible_become_pass=$DEPLOY_USER_PASSWORD registry_password=$CI_BUILD_TOKEN"
+    - ansible-playbook -e 'host_key_checking=False' -i inventory playbook.yml --user gitlab-ci --extra-vars "ansible_pass=$DEPLOY_USER_PASSWORD ansible_become_pass=$DEPLOY_USER_PASSWORD registry_password=$CI_BUILD_TOKEN"
   only:
     - ci # temp, for testing
     - master
