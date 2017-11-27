@@ -24,6 +24,7 @@
     name: docker
     state: restarted
   become: yes
+  tags: restart
 
 - name: Login to docker registry
   docker_login:
