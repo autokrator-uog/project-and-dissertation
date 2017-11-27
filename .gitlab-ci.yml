@@ -1,11 +1,11 @@
 
 variables:
   REGISTRY: sed-team-project:4567
-  REG_EVENT_BUS: sed-team-project:4567/sed-dev-group/sed-dev-project
-  REG_KAFKA_CONNECT: sed-team-project:4567/sed-dev-group/sed-dev-project
+  REG_EVENT_BUS: sed-team-project:4567/sed-dev-group/sed-dev-project:event-bus
+  REG_KAFKA_CONNECT: sed-team-project:4567/sed-dev-group/sed-dev-project:kafka-connect
 
-  EVENT_BUS_TAG_THIS_BUILD: $REG_EVENT_BUS:event-bus-$CI_PIPELINE_ID
-  KAFKA_CONNECT_TAG_THIS_BUILD: $REG_KAFKA_CONNECT:kafka-connect-$CI_PIPELINE_ID
+  EVENT_BUS_TAG_THIS_BUILD: $REG_EVENT_BUS-$CI_PIPELINE_ID
+  KAFKA_CONNECT_TAG_THIS_BUILD: $REG_KAFKA_CONNECT-CI_PIPELINE_ID
 
 stages:
   - test
@@ -15,7 +15,7 @@ stages:
 
 compile_dissertation_latex:
   image: blang/latex
-  stage: build
+  stage: publish
   script:
     - latexmk -pdf -cd docs/dissertation/dissertation.tex
   artifacts:
@@ -58,16 +58,22 @@ tag_production_images:
 
     - docker pull $EVENT_BUS_TAG_THIS_BUILD
     - docker tag $EVENT_BUS_TAG_THIS_BUILD $REG_EVENT_BUS:latest
-    - docker push $REG_EVENT_BUS:latest
+    - docker push $REG_EVENT_BUS
 
     - docker pull $KAFKA_CONNECT_TAG_THIS_BUILD
     - docker tag $KAFKA_CONNECT_TAG_THIS_BUILD $REG_KAFKA_CONNECT:latest
-    - docker push $REG_KAFKA_CONNECT:latest
+    - docker push $REG_KAFKA_CONNECT
+  only:
+    - ci # temp, for testing
+    - master
 
 deploy_to_sed_deploy:
-  image: debian:jessie
+  image: ansible/ubuntu14.04-ansible:stable
   stage: deploy
   script:
-    - echo "TODO implement deploying to our server"
+    - cd deploy
+    - ansible-galaxy install angstwad.docker_ubuntu
+    - ansible-playbook -i inventory playbook.yml --user gitlab-ci --extra-vars "ansible_pass=$DEPLOY_USER_PASSWORD registry_password=$CI_BUILD_TOKEN"
   only:
+    - ci # temp, for testing
     - master
