@@ -9,7 +9,10 @@ We are making an Event Sourcing system based around Apache Kafka.
 
 1. Ensure you have docker correctly installed.
 
-2. `docker-compose up --build -d` This may take a while to pull in dependencies and build an image (from scratch, could be 10+ minutes).
+2. `sudo ./run.sh` This may take a while to pull in dependencies and build an image (from scratch, could be 10+ minutes).
+    - You can specify the `in_docker` flag to this script to run the event bus as a container within docker.
+    - If you do not specify `in_docker`, then any parameters you pass will be passed to `cargo run --`.
+    - You must run this as sudo in order to give permission to edit /etc/hosts
 
 3. Set up Couchbase: http://localhost:8091
   - Cluster name `couchbase.db`, user `connect`, pass `connect`

@@ -1,0 +1,7 @@
+---
+- hosts: deploy
+  roles:
+    - { role: angstwad.docker_ubuntu, become: yes, tags: dockersetup }
+    - { role: registry-setup }
+    - event-bus-dependencies
+    - event-bus

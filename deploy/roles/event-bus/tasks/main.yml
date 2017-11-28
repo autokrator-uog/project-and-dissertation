@@ -1,0 +1,25 @@
+
+- name: Create /var/eventbus
+  file: path=/var/eventbus state=directory mode=0755
+  become: yes
+
+- name: Copy docker-compose file to server
+  copy:
+    src: "{{ role_path }}/files/docker-compose.yml"
+    dest: /var/eventbus/docker-compose.yml
+    owner: gitlab-ci
+  become: yes
+
+- name: Start up event bus dependencies via docker compose
+  docker_service:
+    project_src: /var/eventbus
+    state: present
+    pull: yes
+  register: output
+  become: yes
+
+- name: Ensure necessary services are running
+  assert:
+    that:
+      - "eventbus.eventbus_eventbus_1.state.running"
+  become: yes

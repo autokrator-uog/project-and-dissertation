@@ -1,0 +1,17 @@
+version: '2.2'
+
+networks:
+  hostnet:
+    external:
+      name: thenet
+
+services:
+  event-bus:
+    build: ../event-bus/
+    environment:
+      BROKER: kafka:9092
+      TOPIC: events
+      GROUP: event-bus
+    networks:
+      - hostnet
+      - kafka-public

@@ -1,0 +1,35 @@
+- name: Ensure /etc/hosts has sed-team-project
+  lineinfile:
+    path: /etc/hosts
+    regexp: "sed-team-project"
+    line: "130.209.251.31 sed-team-project"
+  become: yes
+
+- name: Ensure local certs directory exists
+  file: state=directory path=/usr/local/share/ca-certificates
+  become: yes
+
+- name: Install gitlab repository certificate
+  copy:
+    src: "{{ role_path }}/files/sed-team-project.crt"
+    dest: /usr/local/share/ca-certificates/sed-team-project.crt
+  become: yes
+
+- name: Update cert index
+  shell: /usr/sbin/update-ca-certificates
+  become: yes
+
+- name: Restart docker
+  service:
+    name: docker
+    state: restarted
+  become: yes
+  tags: restart
+
+- name: Login to docker registry
+  docker_login:
+    username: "gitlab-ci-token"
+    password: "{{ registry_password }}"
+    registry_url: sed-team-project:4567
+    reauthorize: yes
+  become: yes

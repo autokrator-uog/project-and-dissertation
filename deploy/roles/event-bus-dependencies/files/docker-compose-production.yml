@@ -1,8 +1,6 @@
 version: '2.2'
 
 networks:
-  ingress:
-    driver: bridge
   kafka-internal:
     driver: bridge
   kafka-public:
@@ -35,7 +33,7 @@ services:
     restart: always
 
   connect:
-    build: persistence/connect-custom/
+    image: sed-team-project:4567/sed-dev-group/sed-dev-project/kafka-connect:latest
     restart: always
     ports:
       - "8083:8083"
@@ -46,6 +44,7 @@ services:
 
   couchbase.db:
     image: couchbase
+    restart: always
     networks:
       - persistence
     ports:
@@ -53,13 +52,3 @@ services:
       - 11210-11211:11210-11211
     volumes:
       - ./persistence/cb/data:/opt/couchbase/var/lib/couchbase/data
-
-  event-bus:
-    build: event-bus/
-    environment:
-      BROKER: kafka:9092
-      TOPIC: events
-      GROUP: event-bus
-    networks:
-      - ingress
-      - kafka-public
