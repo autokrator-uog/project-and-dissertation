@@ -3,7 +3,7 @@ version: '2.2'
 networks:
   kafka-public:
     external:
-      name: kafka-public
+      name: src_kafka-public
 
 services:
   event-bus:
