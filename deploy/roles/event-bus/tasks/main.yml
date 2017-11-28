@@ -1,13 +1,25 @@
 
+- name: Create /var/event-bus
+  file: path=/var/event-bus state=directory mode=0755
+  become: yes
 
-- name: Pull and run the latest event bus container
-  docker:
-    name: event-bus
-    image: sed-team-project:4567/sed-dev-group/sed-dev-project:event-bus
-    state: reloaded
-    pull: always
-    links:
-      - "src_kafka_1"
-      - "src_zookeeper_1"
-      - "src_couchbase.db_1"
+- name: Copy docker-compose file to server
+  copy:
+    src: "{{ role_path }}/files/docker-compose.yml"
+    dest: /var/event-bus/docker-compose.yml
+    owner: gitlab-ci
+  become: yes
+
+- name: Start up event bus dependencies via docker compose
+  docker_service:
+    project_src: /var/event-bus
+    state: present
+    pull: yes
+  register: output
+  become: yes
+
+- name: Ensure necessary services are running
+  assert:
+    that:
+      - "event-bus.event-bus_event-bus_1.state.running"
   become: yes

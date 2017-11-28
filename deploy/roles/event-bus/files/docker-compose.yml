@@ -1,0 +1,16 @@
+version: '2.2'
+
+networks:
+  kafka-public:
+    external:
+      name: kafka-public
+
+services:
+  event-bus:
+    image: sed-team-project:4567/sed-dev-group/sed-dev-project:event-bus
+    environment:
+      BROKER: kafka:9092
+      TOPIC: events
+      GROUP: event-bus
+    networks:
+      - kafka-public
