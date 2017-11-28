@@ -1,11 +1,11 @@
 
 variables:
   REGISTRY: sed-team-project:4567
-  REG_EVENT_BUS: sed-team-project:4567/sed-dev-group/sed-dev-project:event-bus
-  REG_KAFKA_CONNECT: sed-team-project:4567/sed-dev-group/sed-dev-project:kafka-connect
+  REG_EVENT_BUS: sed-team-project:4567/sed-dev-group/sed-dev-project/event-bus
+  REG_KAFKA_CONNECT: sed-team-project:4567/sed-dev-group/sed-dev-project/kafka-connect
 
-  EVENT_BUS_TAG_THIS_BUILD: $REG_EVENT_BUS-$CI_COMMIT_REF_NAME
-  KAFKA_CONNECT_TAG_THIS_BUILD: $REG_KAFKA_CONNECT-$CI_COMMIT_REF_NAME
+  EVENT_BUS_TAG_THIS_BUILD: $REG_EVENT_BUS:$CI_COMMIT_REF_NAME
+  KAFKA_CONNECT_TAG_THIS_BUILD: $REG_KAFKA_CONNECT:$CI_COMMIT_REF_NAME
 
 stages:
   - test
@@ -56,8 +56,8 @@ prod_tag_event_bus:
     - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY
 
     - docker pull $EVENT_BUS_TAG_THIS_BUILD
-    - docker tag $EVENT_BUS_TAG_THIS_BUILD $REG_EVENT_BUS
-    - docker push $REG_EVENT_BUS
+    - docker tag $EVENT_BUS_TAG_THIS_BUILD $REG_EVENT_BUS:latest
+    - docker push $REG_EVENT_BUS:latest
   only:
     - master
 
@@ -68,8 +68,8 @@ prod_tag_kafka_connect:
     - echo "$CI_BUILD_TOKEN" | docker login -u gitlab-ci-token --password-stdin $REGISTRY
 
     - docker pull $KAFKA_CONNECT_TAG_THIS_BUILD
-    - docker tag $KAFKA_CONNECT_TAG_THIS_BUILD $REG_KAFKA_CONNECT
-    - docker push $REG_KAFKA_CONNECT
+    - docker tag $KAFKA_CONNECT_TAG_THIS_BUILD $REG_KAFKA_CONNECT:latest
+    - docker push $REG_KAFKA_CONNECT:latest
   only:
     - master
 
