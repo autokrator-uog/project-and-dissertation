@@ -51,4 +51,4 @@ services:
       - 8091-8094:8091-8094
       - 11210-11211:11210-11211
     volumes:
-      - ./persistence/cb/data:/opt/couchbase/var/lib/couchbase/data
+      - ../persistence/cb/data:/opt/couchbase/var/lib/couchbase/data
