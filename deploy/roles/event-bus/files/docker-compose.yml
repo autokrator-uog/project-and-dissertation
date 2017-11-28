@@ -7,7 +7,7 @@ networks:
 
 services:
   eventbus:
-    image: sed-team-project:4567/sed-dev-group/sed-dev-project:event-bus
+    image: sed-team-project:4567/sed-dev-group/sed-dev-project/event-bus:latest
     environment:
       BROKER: kafka:9092
       TOPIC: events
