@@ -1,5 +1,5 @@
 
-- name: Create /var/event-bus
+- name: Create /var/eventbus
   file: path=/var/eventbus state=directory mode=0755
   become: yes
 
