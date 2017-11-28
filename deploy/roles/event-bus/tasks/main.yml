@@ -1,0 +1,13 @@
+
+
+- name: Pull and run the latest event bus container
+  docker:
+    name: event-bus
+    image: sed-team-project:4567/sed-dev-group/sed-dev-project:event-bus
+    state: reloaded
+    pull: always
+    links:
+      - "src_kafka_1"
+      - "src_zookeeper_1"
+      - "src_couchbase.db_1"
+  become: yes
