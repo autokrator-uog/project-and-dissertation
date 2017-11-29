@@ -33,7 +33,7 @@ services:
     restart: always
 
   connect:
-    image: sed-team-project:4567/sed-dev-group/sed-dev-project/kafka-connect:latest
+    image: sed-team-project:4567/sed-dev-group/persistence/kafka-connect:latest
     restart: always
     ports:
       - "8083:8083"
