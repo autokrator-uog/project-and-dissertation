@@ -1,19 +1,28 @@
 # Client Apps
 
-![Diagram](./ClientSide.png)
+![Diagram](./ClientSide_5_12_17.png)
 
 Above is a diagram of client apps architecture and how the main communicaiton will occur within them.
 
 
 ## Event Schemas
 
-### AccountCreation
+### AccountCreationRequest
+
+This event has no real need for a body, because the Accounts service doesn't need to care about users, it just gets an instruction to create an account. To track which account request it is, add the option for the user service to specify a request ID.
+```
+{
+  "RequestID": String,
+  "Timestamp": String
+}
+```
+
+### AccountCreated
 
 ```
 {
-  "AccountID": Integer,
-  "PasswordHash": String,  // used on redelivery to build up internal DB state
-  "Timestamp": String
+  "RequestID": String,
+  "AccountID": Integer
 }
 ```
 
@@ -24,7 +33,7 @@ Above is a diagram of client apps architecture and how the main communicaiton wi
   "TransactionID": Integer,
   "FromAccountID": Integer,
   "ToAccountID": Integer,
-  "Amount": Decimal
+  "Amount": String // string of decimal representation (2 decimal places)
 }
 ```
 
@@ -39,7 +48,7 @@ Above is a diagram of client apps architecture and how the main communicaiton wi
 ```
 {
     "AccountID": Integer,
-    "Amount": Decimal,
+    "Amount": String, // string of decimal representation (2 decimal places)
     "Timestamp": String
 }
 ```
