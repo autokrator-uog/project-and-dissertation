@@ -1,6 +1,6 @@
 # Client Apps
 
-![Diagram](./ClientSide_5_12_17.png)
+![Diagram](./ClientSideUpdated_5_12_17.png)
 
 Above is a diagram of client apps architecture and how the main communicaiton will occur within them.
 
