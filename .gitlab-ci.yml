@@ -7,7 +7,7 @@ compile_dissertation_latex:
   image: blang/latex
   stage: publish
   script:
-    - latexmk -pdf -cd docs/dissertation/dissertation.tex
+    - latexmk -pdf -cd dissertation/dissertation.tex
   artifacts:
     paths:
       - "*.pdf"
