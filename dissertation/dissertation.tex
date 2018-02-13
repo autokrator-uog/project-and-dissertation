@@ -1,209 +1,246 @@
 \documentclass{l3proj}
-
 \begin{document}
 
-\title{Building an Event Bus}
-
+\title{Event sourcing as a microservices architecture}
 \author{Connor Jardine \\
         David Wood \\
         Frank Bojen \\
         Naji Shehab \\
         Patrick Menlove}
-
 \date{17 January 2018}
-
 \maketitle
 
 \begin{abstract}
-
-The abstract goes here
-
+This report presents a case study covering the implementation of an event-sourced application composed of microservices and an event bus. Built for Avaloq \cite{avaloq}, a Swiss company that builds software for banks, the application architecture is intended to enable exploration of any associated problems and solutions. Throughout this report, various architectural issues - such as maintaining consistency in a distributed system, enabling correlation of related events and enabling inter-service communication - will be discussed. Implementation-specific issues are also discussed, such as the practicality, advantages and disadvantages of developing the event bus in Rust.
 \end{abstract}
-
-%% Comment out this line if you do not wish to give consent for your
-%% work to be distributed in electronic format.
 \educationalconsent
 
 \newpage
+%------------------------------------------------------------------------------
+\tableofcontents
 
-%==============================================================================
+\newpage
+%------------------------------------------------------------------------------
 \section{Introduction}
+\label{sec:introduction}
+This paper presents a case study of the advantages and disadvantages of event sourcing as a architecture for a microservices-based financial application - it will discuss the architectural challenges faced such as consistency in a distributed system; correlation of related events from different sources and reliability in highly asynchronous systems.
 
-Software engineering
+Further, this case study will discuss the technical hurdles specific to this implementation, in particular: the advantages and disadvantages of using the technologies used - Rust and React - in building the system and the benefits of quick deprecation and replacement of existing infrastructure for improvements.
 
-This paper presents a case study of...
-
-
-%% Final paragraph.
-The rest of the case study is structured as follows.  Section
-\ref{sec:background} presents the background of the case study
-discussed, describing the customer and project context, aims and
-objectives and project state at the time of writing.  Sections
-\ref{sec:alice} through Section \ref{sec:managing} discuss issues that
-arose during the project...
+The rest of the case study is structured as follows: a background on the requirements of the project; a deep-dive into the software development process and methodologies used; how consistency and correlation were designed and implemented; an overview of the improvements to service reliability brought on by implementation of the sticky round robin and acks; challenges in achieving persistence with couchbase and working with microservices; the design and implementation of the UI backend; and advantages and disadvantages of the core technologies used.
 
 %==============================================================================
 \section{Case Study Background}
 \label{sec:background}
+This project was completed on behalf of Avaloq. Avaloq is a Swiss company that specializes in the creation of bespoke software for banks and other customers in the financial industry. Avaloq serves over 450 financial institutions worldwide and their software underpins \$4 trillion globally.
 
-Include details of
+Avaloq wanted a proof-of-concept event sourcing platform that would allow for the replay and distribution of arbitrary events across multiple subscribed services. In order to demonstrate this it was requested that a simple financial application capable of money transfers be created, consisting of at least three microservices communicating around a core event bus.
+
+Event sourcing is an architecture where unlike traditional architectures the state of objects is not persisted, instead the sequence of events which created that state are. Event sourcing has numerous benefits:
 
 \begin{itemize}
-\item The customer organisation and background.
-\item The rationale and initial objectives for the project.
-\item The final software was delivered for the customer.
+    \item State of any event bus client can be rebuilt entirely from the events.
+    \item The application state can be inspected for any point in time by composing the events up until that time. This has major benefits for auditing.
 \end{itemize}
 
-%==============================================================================
-\section{Alice}
-\label{sec:alice}
 
-ALICE \cite{alice} was beginning to get very tired of sitting by her sister
-on the bank and of having nothing to do: once or twice she had peeped into
-the book her sister was reading, but it had no pictures or conversations in
-it, ``and what is the use of a book,'' thought Alice, ``without pictures or
-conversations?'
+Within the requested demo application, clients should be able to subscribe and publish events to the platform.
 
-So she was considering, in her own mind (as well as she could, for the hot
-day made her feel very sleepy and stupid), whether the pleasure of making a
-daisy-chain would be worth the trouble of getting up and picking the
-daisies, when suddenly a White Rabbit with pink eyes ran close by her.
+\begin{itemize}
+    \item Subscribers and publishers need not be on the same machine.
+    \item Subscribers should only receive events that interest them.
+    \item Events should be generic in that they can represent any textual data.
+    \item Events should be persistent and immutable.
+\end{itemize}
 
-There was nothing so very remarkable in that; nor did Alice think it so
-very much out of the way to hear the Rabbit say to itself ``Oh dear! Oh
-dear! I shall be too late!'' (when she thought it over afterwards it
-occurred to her that she ought to have wondered at this, but at the time it
-all seemed quite natural); but, when the Rabbit actually took a watch out
-of its waistcoat-pocket, and looked at it, and then hurried on, Alice
-started to her feet, for it flashed across her mind that she had never
-before seen a rabbit with either a waistcoat-pocket, or a watch to take out
-of it, and burning with curiosity, she ran across the field after it, and
-was just in time to see it pop down a large rabbit-hole under the hedge.
-
-In another moment down went Alice after it, never once considering how in
-the world she was to get out again.
-
-The rabbit-hole went straight on like a tunnel for some way, and then
-dipped suddenly down, so suddenly that Alice had not a moment to think
-about stopping herself before she found herself falling down what seemed to
-be a very deep well.
-
-Either the well was very deep, or she fell very slowly, for she had plenty
-of time as she went down to look about her, and to wonder what was going to
-happen next. First, she tried to look down and make out what she was coming
-to, but it was too dark to see anything: then she looked at the sides of
-the well, and noticed that they were filled with cupboards and
-book-shelves: here and there she saw maps and pictures hung upon pegs. She
-took down ajar from one of the shelves as she passed: it was labeled
-``ORANGE MARMALADE'' but to her great disappointment it was empty: she did
-not like to drop the jar, for fear of killing somebody underneath, so
-managed to put it into one of the cupboards as she fell past it.
-
-``Well!'' thought Alice to herself ``After such a fall as this, I shall think
-nothing of tumbling down-stairs! How brave they'll all think me at home!
-Why, I wouldn't say anything about it, even if I fell off the top of the
-house!'' (which was very likely true.)
-
-Down, down, down. Would the fall never come to an end? ``I wonder how many
-miles I've fallen by this time?'' she said aloud. ``I must be getting
-somewhere near the centre of the earth. Let me see: that would be four
-thousand miles down, I think-'' (for, you see, Alice had learnt several
-things of this sort in her lessons in the school-room, and though this was
-not a very good opportunity for showing off her knowledge, as there was no
-one to listen to her, still it was good practice to say it over) `` yes
-that's about the right distance -- but then I wonder what Latitude or
-Longitude I've got to?'' (Alice had not the slightest idea what Latitude
-was, or Longitude either, but she thought they were nice grand words to
-say.)
-
-Presently she began again. ``I wonder if I shall fall fight through the
-earth! How funny it'll seem to come out among the people that walk with
-their heads downwards! The antipathies, I think-'' (she was rather glad
-there was no one listening, this time, as it didn't sound at all the right
-word) ``but I shall have to ask them what the name of the country is, you
-know. Please, Ma'am, is this New Zealand? Or Australia?'' (and she tried to
-curtsey as she spoke- fancy, curtseying as you're falling through the air!
-Do you think you could manage it?) ``And what an ignorant little girl she'll
-think me for asking! No, it'll never do to ask: perhaps I shall see it
-written up somewhere.''
-
-Down, down, down. There was nothing else to do, so Alice soon began talking
-again. ``Dinah'll miss me very much to-night, I should think!'' (Dinah was
-the cat.) ``I hope they'll remember her saucer of milk at tea-time. Dinah,
-my dear! I wish you were down here with me! There are no mice in the air,
-I'm afraid, but you might catch a bat, and that's very like a mouse, you
-know. But do cats eat bats, I wonder?'' And here Alice began to get rather
-sleepy, and went on saying to herself, in a dreamy son of way, ``Do cats eat
-bats? Do cats eat bats?'' and sometimes ``Do bats eat cats?'' for, you see, as
-she couldn't answer either question, it didn't much matter which way she
-put it. She felt that she was dozing off, and had just begun to dream that
-she was walking hand in hand with Dinah, and was saying to her, very
-earnestly, ``Now, Dinah, tell me the truth: did you ever eat a bat?'' when
-suddenly, thump! thump! down she came upon a heap of sticks and dry leaves,
-and the fall was over.
-
-Alice was not a bit hurt, and she jumped up on to her feet in a moment: she
-looked up, but it was all dark overhead: before her was another long
-passage, and the White Rabbit was still in sight, hurrying down it. There
-was not a moment to be lost: away went Alice like the wind, and was just in
-time to hear it say, as it turned a comer, ``Oh my ears and whiskers, how
-late it's getting!'' She was close behind it when she turned the comer, but
-the Rabbit was no longer to be seen: she found herself in a long, low hall,
-which was lit up by a row of lamps hanging from the roof.
-
-There were doors all round the hall, but they were all locked; and when
-Alice had been all the way down one side and up the other, trying every
-door, she walked sadly down the middle, wondering how she was ever to get
-out again.
-
-Suddenly she came upon a little three-legged table, all made of solid
-glass: there was nothing on it but a tiny golden key, and Alice's first
-idea was that this might belong to one of the doors of the hall; but, alas!
-either the locks were too large, or the key was too small, but at any rate
-it would not open any of them. However, on the second time round, she came
-upon a low curtain she had not noticed before, and behind it was a little
-door about fifteen inches high: she tried the little golden key in the
-lock, and to her great delight it fitted!
-
-\input{figures/alice}
-
-Alice opened the door (see Figure \ref{fig:alice}) and found that it
-led into a small passage, not much larger than a rat-hole: she knelt
-down and looked along the passage into the loveliest garden you ever
-saw. How she longed to get out of that dark hall, and wander aboutamong those beds of bright flowers and those cool fountains, but she
-could not even get her head through the doorway; ``and even if my head
-would go through,'' thought poor Alice, ``it would be of very little
-use without my shoulders. Oh, how I wish I could shut up like a
-telescope! I think I could, if I only knew how to begin.'' For, you
-see, so many out-of-the- way things had happened lately, that Alice
-had begun to think that very few things indeed were really impossible.
+It is also requested that a user-facing client that interacts with the three microservices be created.
 
 %==============================================================================
+\section{Process}
+\label{sec:process}
+Write something here!
 
-\section{Choice of Colours}
-\label{design}
+\subsection{Pair Programming}
+Write something here!
 
-The following diagrams (especially figure \ref{fig:alice}) illustrate the
-process...
+\subsection{Mentored Issues}
+Write something here!
+
+From the perspective of the mentor - mentored issues allow for a balance between providing too much assistance and allowing the mentee to do some research and learn by doing. It is also beneficial as it doesn't require meetings between the team members that can be hard to schedule.
+
+\subsection{Learning Curves}
+Write something here!
+
+\subsection{Agile and Team Roles}
+Write something here!
 
 %==============================================================================
-\section{Managing Dress Sense}
-\label{managing}
+\section{Consistency}
+\label{sec:consistency}
 
-In this chapter, we describe how the implemented the system.
+One of the fundamental challenges when building distributed systems is ensuring consistency - this is a challenge faced regardless of whether the system is built with an event sourced, modern three tier, sharded, lambda or streaming architecture.
 
-%------------------------------------------------------------------------------
-\section{Kangaroo Practices}
+Without an approach to handle consistency, distributed systems will run into a variety of problems. In this implementation specifically, it is desirable that the event bus has no insight into the events it is processing, this introduces further difficulties to any desirable solution.
 
+The primary issue resulting from a lack of consistency in a distributed system is that two clients can mutate the same state simultaneously.
 
+A traditional example of a problem related to consistency is double-spending. While double-spending is typically associated with digital currencies, it applies to many distributed systems and describes the state becomes inconsistent between participating nodes.
 
-% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\section{Knots and Bundles}
-\label{sec:managing}
+In the context of this event sourcing platform, there are multiple potential issues that could result of poor consistency:
 
+\begin{itemize}
+    \item It is important that a malicious or poorly implemented client cannot send events that would spend the same £5 from one end-user's balance multiple times.
+    \item It is also important that if two events are sent they are received in the same order by all clients, this stops any given end-user from being mistakenly overdrawn if a client receives a withdrawal event before a deposit event.
+\end{itemize}
+
+Any solution for this problem must depend on the protocol for sending events, since the content of any given event cannot be known to the event bus.
+
+Ensuring consistency is inherently a trade-off with speed, this will become evident as this paper discusses the various approaches that were considered for the event bus.
+
+\subsection{Blockchain-Inspired Approach}
+Initially, a blockchain-inspired was chosen. The blockchain \cite{blockchain} is a data structure that originates from Bitcoin \cite{bitcoin}, a digital crypto-currency, inspired by existing data structures like Merkle Trees \cite{merkletree}.
+
+Blockchains are similar to singly linked lists except that contained in each node is the hash of the previous node, thereby enforcing an immutability of all nodes before the head of the list. Bitcoin builds on this by introducing a proof-of-work system so that the next head node can be chosen without the need for a centralized authority - this isn't required in the event bus implementation given that the event bus can act as a centralized authority.
+
+The initial approach conceived was for each event to contain the hash of the previous event, enforced by the event bus.
+
+\input{figures/consistency-1}
+
+When an event was received that contained a hash that did not match the previous event expected by the event bus, then it would be rejected, and the client would be sent an rejection message containing the correct, expected hash. By including the expected hash in the rejection message, this implementation would still allow clients to successfully submit new events while not listening to all events.
+
+One issue with this proposed approach is that a client that listens for \texttt{PendingTransaction} events might still have many queued to process and that despite having the correct next hash (from a rejection or through peeking at the queue) could produce a new event that contradicts one of the events still queued.
+
+\subsection{Blockchain-Inspired with a Sequence Number}
+In order to remedy this, inclusion of a sequence value per event type was proposed. This value would not be sent to clients with the hash on rejection and would therefore require that a client register for and process all events of that type in order to have the correct value.
+
+The sequence value provided would start at zero for any given event type and be incremented by one for any subsequent event of that type.
+
+\input{figures/consistency-2}
+
+This however would not solve the largest issue with a blockchain-esque approach, by enforcing a global ordering, if N events were sent simultaneously, then there would be a minimum of N! rejections and therefore could cause the event bus to be very slow in processing events.
+
+\subsection{Sequence Key/Value Approach}
+Building on the inclusion of a sequence number, the most recent solution to this problem involves the inclusion of both a sequence key and a sequence value - but no hash. A sequence key would be used to uniquely identify any events that could conflict. For example, in the context of a financial application, an account number could be used as a sequence key as any events that modify the state of an account should depend on the most recent state of that account.
+
+\input{figures/consistency-3}
+
+In this scheme, the sequence value would function similarly to before, however, the sequence value would be incremented for each subsequent event of the same key rather than by event type.
+
+%==============================================================================
+\section{Correlation}
+\label{sec:correlation}
+
+Another required feature of the event bus implementation is the ability to trace units of work throughout the system. A unit of work consists of multiple events that when combined represent a single state change. An example of this would be a \texttt{PendingTransaction} that produces a \texttt{ConfirmedTransaction} or \texttt{RejectedTransaction} event.
+
+\subsection{Correlation Tracking}
+Implementation of correlation tracking involved modification of the event bus' client library to include a GUID which each event. However, if an event is related to a previous event and that previous event was provided, the correlation id of that event will be used instead of generating a new id.
+
+\subsection{Session Tracking}
+In addition to correlation tracking, this implementation also includes session tracking which can be used link all events produced by a given instance of a service. This could be useful if a bug was introduced into a microservice and it was desirable to find which events it produced during this time.
+
+%==============================================================================
+\section{Sticky Round Robin}
+\label{sec:sticky-round-robin}
+
+In the spirit of microservices, it is a requirement that multiple instances of a given service be able to run simultaneously in order to horizontally scale the processing performed by that service.
+
+For this to be supported in the event bus implementation presented by this paper, it is required that a solution be developed that allows for this functionality while working within the constraints defined by the consistency solution.
+
+\subsection{A naive approach}
+A naive approach would be to allow many instances of a given service to connect without any functionality in the event bus to support this. However, this approach would be prone to problems.
+
+In this scenario, the event bus would send any given event to all connected clients. If there were multiple instances of a service running, then both services would receive the event and begin processing - this could result in duplicate events being produced as a result - at best, this would waste processing power; at worst this effect could multiply (more duplicate events being processed more than once producting more duplicate events) and act as a denial of service the event bus.
+
+\subsection{Round robin approach}
+Initially, a round robin approach was considered, where clients would register which type of service they represent. Then, when an event is to be sent to a service type, the event bus would perform a round robin selection on the clients of that type. ie. It would cycle through each client.
+
+One theorized issue with this solution is in the interaction with the consistency implementation. If events with the same consistency key are sent to many different clients then none of them will be able to keep track of the expected consistency value.
+
+\subsection{Sticky round robin}
+In order to solve the issues with round robin and consistency, an alternate approach - sticky round robin - was implemented. Sticky round robin builds on the previous solution by allowing a client to be "stuck" to a consistency key. Once a event for a given consistency key is sent to a client (in each client type), then this information is stored and any subsequent events being sent to that client type will be sent to that client.
+
+Once a client disconnects, subsequent events with that consistency key are distributed using the normal round robin algorithm until they are stuck.
+
+%==============================================================================
+\section{ACKs}
+\label{sec:acks}
+
+Another issue related to the operation of the various microservices is ensuring that messages are always processed if services go down or the network fails. If a event was received by a service and then that service crashed during the processing or was unable to respond with any subsequent events.
+
+In order to solve this issue, a system of sending acknowledges was added and making use of shared datastores within a type of service to share state.
+
+When a service starts up, it will have the timestamp of the last message it (or any other services of that type) received from the event bus (this comes from the datastore). By using the most recent timestamp of all services of that type, this implemenation avoids services querying the event bus for events that were processed by another instance in the interim.
+
+The service then queries for new events since that timestamp, all acknowledged events from the event bus are returned (as they were acknowledged we know they do not need processed). This allows the state to be caught up with anything that has happened. If the database is entirely empty and a full rebuild is being performed, then the timestamp will be zero and this will allow a full rebuild.
+
+During any downtime, the event bus will store unacknowledged events and the events are then redistributed using the sticky round robin system.
+
+In order for the above system to work, acknowledgements should only be sent once all processing of an event has been completed, including all database transactions and new events that need sent. The event bus removes the unawknowledged event from it's internal state when an awknowledgement is received.
+
+%==============================================================================
+\section{Persistence and Couchbase}
+\label{sec:persistence}
+Write something here!
+
+%==============================================================================
+\section{Microservices}
+\label{sec:microservices}
+Write something here!
+
+\input{figures/microservices}
+
+\subsection{Design}
+Write something here!
+
+\subsection{Initial Implementation}
+Write something here!
+
+\subsection{Superclient}
+While the initial implementation of the microservices in Java worked and was reliable, it had various downsides that led to slowed iteration:
+
+\begin{itemize}
+    \item While each service did depend on the client library (also written in Java), due to the nature of the client library's design, implementations of many features - such as consistency, ACKs, and querying - would require many changes to the clients themselves. This resulted in a major slowdown to the time required to roll-out new features and test ideas, if the number of services was to increase, this slowdown would also increase.
+    \item Services were hard to build. Due to the verbosity of Java and the functionality required by each service - namely a HTTP server with REST endpoints; and some variety of persistent storage - each service was quite large. If a new type of service was envisioned to supplement the other services or test an edge case in the implementation of other features, it would not have been practical to build due to time constraints.
+\end{itemize}
+
+For these reasons, an experimental project was started that would replace all of the clients and the client library with a framework for building microservices. This framework would handle all the necessary components required by a service - an event bus connection; a webserver; persistent storage - and delegate all processing or handling of events and requests to a scripting language that handles only the changing business logic of each service.
+
+Dubbed the superclient, this project was written in Rust and took advantage of the team's existing knowledge from working on the event bus and allowed for code re-use through a shared common library between the projects. This common library also contained the schemas used to validate the JSON messages - by using the same schemas, we ensured that the superclient and event bus would always send valid JSON to each other.
+
+It was decided that the superclient embed Lua to allow for the swappable service scripts. A minimal interface was exposed to Lua, where events could be sent and callbacks could be registered for new events, receipts for sent events and for rebuilding the state after downtime. Further, two functions were provided that would allow the services to query and fetch from a Redis key value store, enabling each type of service persistence. Other helper functions such as logging were also included.
+
+After a handful of weeks in development, the superclient was ready to replace the existing Java infrastructure. In production, the services demonstrated the same reliability and conversion from the existing Java applications to small Lua scripts was quick and painless (typically taking only a day compared to the one-to-two weeks a Java service took to develop) - demonstrating the ease of use and rapid development enabled by the superclient.
+
+Further, the superclient was easier to maintain - while an imperfect metric, the superclient was around 1700 lines of Rust code, and each service between 100-200 lines of Lua - this is a stark constrast to the Java applications, where the client library clocked in at 1800 lines of Java code, and each service between 600-800 lines. This far reduced the surface area for bugs and the amount of code that each team member would need to understand to work productively on the services.
+
+This experimentation embodies one of the core ideas of the development team - if a team member can think of a way to improve the way something is done or implemented, then do it. This philosophy allowed the team to iterate quickly and not get bogged down with previous work that was unsuitable for current requirements.
+
+%==============================================================================
+\section{UI Backend}
+\label{sec:backend}
+Write something here!
+
+\subsection{Design}
+When deciding how the information was going to be sourced for the UI, there were two conflicting approaches discussed and debated. The first advocated for the UI backend to act as its own service, speaking directly to the event bus and not interacting with any of the microservices - which act as processing nodes only. Alternatively, the second approach advocated for the UI backend to speak only to the microservices through their REST APIs and never to the event bus directly.
+
+The second approach would allow for the UI backend to query the internal state maintained by the services, reducing the processing required to build that state up itself from events directly. This would result in a faster, more responsive UI and was therefore chosen.
+
+\subsection{Implementation}
+Write something here!
+
+%==============================================================================
+\section{React}
+\label{sec:react}
+Write something here!
+
+%==============================================================================
+\section{Rust}
+\label{sec:rust}
+Write something here - touch on why, the frameworks used, the ecosystem.
 
 %------------------------------------------------------------------------------
 \section{Conclusions}
+\label{sec:conclusions}
 
 Explain the wider lessons that you learned about software engineering,
 based on the specific issues discussed in previous sections.  Reflect
@@ -211,7 +248,9 @@ on the extent to which these lessons could be generalised to other
 types of software project.  Relate the wider lessons to others
 reported in case studies in the software engineering literature.
 
-%==============================================================================
+%------------------------------------------------------------------------------
+\addcontentsline{toc}{section}{References}
 \bibliographystyle{plain}
 \bibliography{dissertation}
+
 \end{document}

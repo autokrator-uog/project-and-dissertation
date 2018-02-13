@@ -1,7 +1,5 @@
-
 stages:
   - publish
-  - deploy
 
 compile_dissertation_latex:
   image: blang/latex
@@ -11,15 +9,5 @@ compile_dissertation_latex:
   artifacts:
     paths:
       - "*.pdf"
-  only:
-    - master
-
-deploy_to_sed_deploy:
-  image: williamyeh/ansible:ubuntu16.04
-  stage: deploy
-  script:
-    - cd deploy
-    - ansible-galaxy install angstwad.docker_ubuntu
-    - ansible-playbook -i inventory playbook.yml -u gitlab-ci --skip-tags "dockersetup,restart" --extra-vars "ansible_ssh_pass=$DEPLOY_USER_PASSWORD ansible_become_pass=$DEPLOY_USER_PASSWORD registry_password=$CI_BUILD_TOKEN"
   only:
     - master
