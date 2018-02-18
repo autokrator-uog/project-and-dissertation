@@ -1,14 +1,7 @@
-# Client Apps
+# Event Schemas
+This document contains the schemas for the event bodies sent between services.
 
-![Diagram](./ClientSideUpdated_5_12_17.png)
-
-Above is a diagram of client apps architecture and how the main communicaiton will occur within them.
-
-
-## Event Schemas
-
-### AccountCreationRequest
-
+## AccountCreationRequest
 This event has no real need for a body, because the Accounts service doesn't need to care about users, it just gets an instruction to create an account. To track which account request it is, add the option for the user service to specify a request ID.
 ```
 {
@@ -17,8 +10,7 @@ This event has no real need for a body, because the Accounts service doesn't nee
 }
 ```
 
-### AccountCreated
-
+## AccountCreated
 ```
 {
   "RequestID": String,
@@ -26,8 +18,7 @@ This event has no real need for a body, because the Accounts service doesn't nee
 }
 ```
 
-### PendingTransaction
-
+## PendingTransaction
 ```
 {
   "TransactionID": Integer,
@@ -37,14 +28,14 @@ This event has no real need for a body, because the Accounts service doesn't nee
 }
 ```
 
-### AcceptedTransaction / RejectedTransaction
+## AcceptedTransaction / RejectedTransaction
 ```
 {
   "TransactionID": Integer,
 }
 ```
 
-### ConfirmedCredit / ConfimredDebit
+## ConfirmedCredit / ConfimredDebit
 ```
 {
     "AccountID": Integer,
@@ -52,3 +43,4 @@ This event has no real need for a body, because the Accounts service doesn't nee
     "Timestamp": String
 }
 ```
+
