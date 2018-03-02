@@ -1,4 +1,6 @@
 # Event Consistency
+**Note:** This information isn't 100% up-to-date and may have changed in the actual implementation. Please review `core` repository for up-to-date information.
+
 The major issues in building a decentralized application (including one centred around an event bus) is in ensuring that events sent have a consistent ordering (to avoid double spending and invalid states).
 
 In our implementation, we make use of a pseudo-blockchain to ensure a global ordering across all messages of all event types and then further use a per-event-type sequence numbering to force clients to be up to date with messages on a given event type without requiring they read all messages. This is explained further below.
