@@ -59,6 +59,9 @@ This repository contains a React frontend that acts as the central user interfac
 ### Demo
 This repository contains submodules for each of the various in-use repositories and takes advantage of the Docker containers of each to provide a simple way to start the entire application.
 
+### Jackie (Reporting Service)
+This repository contains a small web application written in [Rust](https://www.rust-lang.org/en-US/) with [Nickel](https://github.com/nickel-org/nickel.rs) that allows for browsing of events queried from [Couchbase](https://www.couchbase.com/). In particular, events can be browsed through their correlation and consistency relationships to other events.
+
 ## Legacy Repositories
 There are also multiple repositories that contain legacy code that is no longer used in the final system but served as experimentations or initial implementations during the project's development.
 
