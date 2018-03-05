@@ -1,5 +1,7 @@
-# SED Project - An Event Sourced Financial Platform
+# SED Project (Autokrator) - An Event Sourced Financial Platform
 This repository acts as a central hub for the SED team project, containing all documentation and specifications related to the child projects as well as the final dissertation. This repository also contains all of the issues for the project.
+
+View [presentation slides](https://docs.google.com/presentation/d/1e55Ijo_pt1K18ZhhTJlBnb1YKaaL5c-ZVjO15hiiWi8/edit?usp=sharing) for this project.
 
 ## About the project
 This project is the result of the third year team project at the University of Glasgow's Computing Science/Software Engineering course. The team was set the task of producing a event sourced financial platform by [Avaloq](https://avaloq.com/). Avaloq are a Swiss company, that specialize in the building of software for financial institutions world-wide.
