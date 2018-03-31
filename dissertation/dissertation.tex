@@ -1,6 +1,13 @@
 \documentclass{l3proj}
 \usepackage{dirtytalk}
 \usepackage{amsmath}
+\usepackage{titlesec}
+
+% Header padding is smaller.
+\titlespacing\section{0pt}{12pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsection{0pt}{8pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsubsection{0pt}{8pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+
 \begin{document}
 
 \title{Building an event sourced financial platform}
@@ -9,44 +16,206 @@
         Frank Bojen \\
         Naji Shehab \\
         Patrick Menlove}
-\date{17 January 2018}
+\date{25th March 2018}
 \maketitle
 
 \begin{abstract}
-This report presents a case study covering the implementation of an event-sourced application composed of microservices and an event bus. Built for Avaloq \cite{avaloq}, a Swiss company that builds software for banks, the application architecture is intended to enable exploration of any associated problems and solutions. Throughout this report, various architectural issues - such as maintaining consistency in a distributed system, enabling correlation of related events and enabling inter-service communication - will be discussed. Implementation-specific issues are also discussed, such as the practicality, advantages and disadvantages of developing the event bus in Rust.
+This report presents a case study of the processes and practices employed to successfully implement an event sourced financial platform.
+
+Built for Avaloq \cite{avaloq}, a Swiss company that builds software for banks, this project is intended to explore the advantages and disadvantages involved with event sourcing as an application architecture.
+
+It will discuss the application of agile methodology; techniques for increasing developer productivity such as pair programming and mentored issues; approaches for dealing with steep learning curves when dealing with unfamiliar technologies; and experiences gained in tackling technical challenges associated with distributed systems and social challenges faced when working with external clients and collaborating as a team.
 \end{abstract}
 \educationalconsent
 
 \newpage
 %------------------------------------------------------------------------------
 \tableofcontents
+%
+% ▄▄▄█████▓▓█████ ▄▄▄       ███▄ ▄███▓     ██████ ▓█████ ▓█████▄
+% ▓  ██▒ ▓▒▓█   ▀▒████▄    ▓██▒▀█▀ ██▒   ▒██    ▒ ▓█   ▀ ▒██▀ ██▌
+% ▒ ▓██░ ▒░▒███  ▒██  ▀█▄  ▓██    ▓██░   ░ ▓██▄   ▒███   ░██   █▌
+% ░ ▓██▓ ░ ▒▓█  ▄░██▄▄▄▄██ ▒██    ▒██      ▒   ██▒▒▓█  ▄ ░▓█▄   ▌
+%   ▒██▒ ░ ░▒████▒▓█   ▓██▒▒██▒   ░██▒   ▒██████▒▒░▒████▒░▒████▓
+%   ▒ ░░   ░░ ▒░ ░▒▒   ▓▒█░░ ▒░   ░  ░   ▒ ▒▓▒ ▒ ░░░ ▒░ ░ ▒▒▓  ▒
+%     ░     ░ ░  ░ ▒   ▒▒ ░░  ░      ░   ░ ░▒  ░ ░ ░ ░  ░ ░ ▒  ▒
+%   ░         ░    ░   ▒   ░      ░      ░  ░  ░     ░    ░ ░  ░
+%             ░  ░     ░  ░       ░            ░     ░  ░   ░
+%                                                         ░
+%
+% The Finland conspiracy states that Finland is not a real country.
+% Not only is it not a real country but there is actually no landmass
+% there at all, and the space between Sweden and Russia is actually empty ocean.
+%
+% Now I realise that this notion seems ridiculous but that is why the
+% conspiracy works, and why people are afraid to speak out against the
+% existence of Finland, so I would ask you to approach the evidence I put
+% forward here with an open mind.
+%
+% Finland was first created some time during the Cold War between Russia
+% and the West. It was also around this time that environmentalism and the
+% idea of preserving our planet was really taking off, and it is due to
+% both of those things that two of the main players in the Finland
+% conspiracy came to work closely with each other, Russia and Japan.
+%
+% Japan-Soviet relations had always been shaky at best, but also incredibly
+% secretive. Even as early as 1925 Japan and the Soviet Union had secret deals
+% with each other regarding fishing rights between the two countries, with
+% the Soviet Union giving up much of it's fishing rights to Japan with
+% seemingly no explanation as to why.
+%
+% These secretive treaties and alliances continued right up until just before
+% the fall of the Soviet Union, Gorbachev made trips to Japan months before
+% the fall of the Soviet Union stating the entire time how the relations between
+% them were improving, even when Soviet relations with the rest of the world
+% were worsening.
+%
+% In fact the entire past 100 years of Japanese-Russian relations bring
+% up many unanswered questioned.
+%
+% Why at the height of WW2, were the battles between these two countries
+% minimal despite being on opposing sides?
+%
+% Why did Japan sign a peace treaty with Russia in 1941, just months before
+% their allies, Germany, went to war with Russia?
+%
+% Why were relations between Japan and Russia always good throughout the
+% Cold War, despite the major geopolitical differences between the countries,
+% and close geographical positions that you think would cause tensions?
+%
+% The answer is simple, they shared a common secret. A common asset that
+% worked in both of their favours. And that asset was Finland.
+%
+% It's unclear when Finland was first thought up, some say it was during
+% the Cold War, and others say it was as far back as the 1920's, but the
+% necessity of Finland is quite simple.
+%
+% Japan can fish in the region of ocean between Sweden and Russia without worry
+% for environmental repercussions, after all, nobody's going to expect
+% fishing regulations to be broken in a place where everyone thinks there's
+% a landmass will they? And in return Russia get a percentage of the fish
+% to distribute amongst their populace.
+%
+% It's a simple case of fishing the Finnish Sea, transporting it across
+% Russia, (that was the real reason for the construction of the
+% Trans-Siberian railway by the way), and then shipping it from the Eastern
+% Russian coast to Japan under the disguise of 'Nokia' products.
+%
+% This is why Nokia is the largest 'Finnish' company, and it is also why
+% Japan is the largest importer of Nokia products, despite the fact that
+% very few people own Nokia phones in the country.
+%
+% There are clearly some unanswered questions to this conspiracy that I'll
+% try and address below.
+%
+%  1- What about Finnish people? Are they all in on the conspiracy?
+%
+%  A. No. People from Finland genuinely believe they're from Finland. In reality
+%     they are from small towns on either the Eastern part of Sweden, the Western
+%     part of Russia, or the Northern part of Estonia.
+%
+%  2- What about all of Finland's other exports other than Nokia?
+%
+%  A. Finland's three biggest, and three most well known areas of industry
+%     are Oil, Tech, and Software. The oil is gathered in offshore platforms
+%     where the rest of us believe the landmass of Finland is, (again the Japanese
+%     get to avoid rigging regulations in this respect), the Tech companies have
+%     already been explained above with the Nokia post, and Software companies can
+%     easily redirect their IP Address through the Finnish sea. As for other Finnish
+%     exports, well, claiming Santa comes from your country isn't a viable way to
+%     get people to believe in it.
+%
+%  3- What about Helsinki? That is an enormous city on the world stage.
+%
+%  A. Helsinki is located in Eastern Sweden. It's not like the people flying
+%     there would notice.
+%
+%  4- What about everywhere else in Finland? There's a lot to it and it couldn't
+%     all be made up.
+%
+%  A. 99% of Finland is forest. A lot of it doesn't need to be accounted for when
+%     addressing Finnish geography.
+%
+%  5- Why do other countries go along with it?
+%
+%  A. At first it was a sign of goodwill between Western Countries and the Soviet
+%     Union. A bargaining chip that could be played. But Finland has since evolved to
+%     something much more. An idealistic placeholder for what countries should aspire
+%     to. No real country could so consistently place first in Education, Healthcare,
+%     Gender Equality, Literacy Rates, National Stability, The least corrupt government
+%     in the world, Freedom of the press. It's a concept for countries and people to
+%     aspire to. But that's where the problems about Finland's existence is disputed.
+%     no country in the world can possibly be that good.
+%
+%  6- Why the name Finland?
+%
+%  A. The country was originally made for fishing. What do fish have? Fins. Thus Finland.
+%
+%  7- What about the Finnish language?
+%
+%  A. Look up the similarities between Japanese and Finnish. It may surprise you how
+%     similar they are. Which is weird considering the vast distances between them.
+%
+%  8- I'm Finnish and your attack on my people and culture is insulting.
+%
+%  A. I'm not insulting Finnish people or culture. I don't even deny that there is
+%     Finnish culture. When you have a collective of a few million people identifying
+%     as Finnish then of course a culture will be built around it. I'm simply saying
+%     that that the landmass of Finland isn't actually there. It doesn't mean there
+%     can't be a culture or identity of being Finnish however.
+%
+%  9- This is an enormous conspiracy to keep secret, how could nobody else of realised it?
+%
+%  A. Other people have realised it. But imagine the ridiculousness of the statement
+%     'I don't believe Finland exists'. Even if we did have undeniable proof of something
+%     put in front of us we would still hold the opinion that most of our friends,
+%     family, and acquaintances hold to not disrupt social convention. It's part of
+%     the human condition.
+%
+%  10- What about GPS and Satellite Images?
+%
+%  A. It's manipulated and forged. In the parts of Estonia, Sweden, and Russia that
+%     are allocated as 'Finnish zones' the GPS locations are changed to match that
+%     of Finland. Satellite images are forged. This is how that part of the world
+%     really looks.
 
 \newpage
 %------------------------------------------------------------------------------
+% From Moodle:
+%  An introduction, explaining the purpose of the document, a very brief outline
+%  of the project and a summary of the structure of the rest of the document
+%  (approximately 1-2 pages).
+%------------------------------------------------------------------------------
 \section{Introduction}
 \label{sec:introduction}
-This paper presents a case study of the advantages and disadvantages of event sourcing as an architecture for a microservices-based financial application - it will discuss the architectural challenges faced such as consistency in a distributed system; correlation of related events from different sources and reliability in highly asynchronous systems.
+Software engineering is a challenging discipline - balancing project requirements with technical considerations as a team is fraught with potential pitfalls. This report reflects on the experiences gained, processes employed and stumbles avoided while building an event sourced financial platform for Avaloq.
 
-Further, this case study will discuss the technical hurdles specific to this implementation, in particular: the advantages and disadvantages of using the technologies used - from Rust to Couchbase - in building the system and the benefits of quick deprecation and replacement of existing infrastructure for improvements.
+One key topic covered in this report is the team's application of an agile software development methodology - Scrum \cite{scrum}. Scrum is a lightweight process framework for agile development. Scrum processes influenced the team's feature estimation, iteration planning and communication. Throughout the project, these techniques resulted in increased productivity and a high-quality final product and will be discussed in further sections.
 
-The rest of the case study is structured as follows: a background on the requirements of the project; a deep-dive into the software development process and methodologies used; how consistency and correlation were designed and implemented; an overview of the improvements to service reliability brought on by implementation of the "Sticky Round Robin" and ACKs; challenges in achieving persistence with Couchbase and working with microservices; the design and implementation of the UI backend; and the advantages and disadvantages of the core technologies used.
+Further, various techniques employed to improve effectiveness as a team and productivity will also be reviewed - including advantages and disadvantages of pair programming in a highly asynchronous team and the impacts and rational behind switching to a mentored issues approach.
 
+The rest of the case study is structured as follows: a background on the requirements of the project; an overview of the software development process used; a then deep-dive into the planning process. It then moves on to talk about specific challenges like communication with the client, the technical structure of the project and tooling, tackling the issues of knowledge silos and of technical challenges.
+
+%==============================================================================
+% From Moodle:
+%  A description of the case study background and context. This should include
+%  a description of the project customer (what was the nature of the organisation
+%  you were working for), their objectives for the project, and...
 %==============================================================================
 \section{Case Study Background}
 \label{sec:background}
-This project was completed on behalf of Avaloq. Avaloq is a Swiss company that specializes in the creation of bespoke software for banks and other customers in the financial industry. Avaloq serves over 450 financial institutions worldwide and their software underpins \$4 trillion globally.
+This project was completed for Avaloq, a Swiss company that specialises in the creation of bespoke software for banks and other customers in the financial industry. Avaloq serves over 450 financial institutions worldwide and their software underpins \$4 trillion worth of assets globally.
 
-Avaloq wanted a proof-of-concept event sourcing platform that would allow for the replay and distribution of arbitrary events across multiple subscribed services. In order to demonstrate this it was requested that a simple financial application capable of money transfers be created, consisting of at least three microservices communicating around a core event bus.
+Avaloq wanted a proof-of-concept event sourcing platform that would allow for the replay and distribution of arbitrary events across multiple subscribed services. In order to demonstrate this it was requested that a simple financial application capable of carrying out money transfers, consisting of at least three microservices communicating around a core event bus.
 
 Event sourcing is an architectural pattern where unlike traditional systems the state of objects is not persisted, instead the sequence of events which created that state are. Event sourcing has numerous benefits:
 
 \begin{itemize}
-    \item State of any event bus client can be rebuilt entirely from the events.
+    \item The state of any event bus client can be rebuilt entirely from the events.
     \item The application state can be inspected for any point in time by composing the events up until that time. This has major benefits for auditing.
 \end{itemize}
 
-
-Within the requested demo application, clients should be able to subscribe and publish events to the platform:
+Within the requested demo application, clients should be able to subscribe and publish events to the platform, the following was formulated through the creation of use cases:
 
 \begin{itemize}
     \item Subscribers and publishers need not be on the same machine.
@@ -63,300 +232,347 @@ Furthermore, there were various requirements on the microservices themselves tha
     \item Events should have an ordering/consistency throughout the platform.
 \end{itemize}
 
-It is also requested that a user-facing client that interacts with the three microservices be created.
+It was also requested that a user-facing client that interacts with the three microservices be created.
+
+It is important to note that from the beginning it was made clear to the team by Avaloq that at no point would the code produced during this project be used in an actual live production environment, and therefore the project was experimental in nature. This resulted in a decreased emphasis on aspects such as security, monitoring and deployment - however, ensuring the final product was reliable and resilient (through horizontal scaling, for example) was an important consideration. The experimental nature of the project also allowed the team to focus on the key functionality required by the system.
+
+Another result of this is that less consideration needs to be paid to the human and organisational factors that might affect an event sourced financial platform, therefore avoiding issues such as those faced by the London Ambulance Service's dispatching system \cite{london-ambulance} - where insufficient emphasis was placed on training, resulting in many ambulances arriving (or failing to arrive) to emergencies.
 
 %==============================================================================
-\section{Process}
-\label{sec:process}
-After the initial client meeting, team roles were decided on for the project. Patrick took on the role of Scrum Master - managing sprints and organizing sprint planning, retrospectives and facilitating the team. Connor took on the role of Product Owner - being the liaison between the team and the customers, this involved providing a progress report at the end of each sprint and being the point of contact for any questions between the team and the customer.
+% From Moodle:
+%  ...a summary of what was actually achieved. Where appropriate, this section
+%  should also make reference to similar related projects in order to make the
+%  context clear (approximately 4-5 pages).
+%==============================================================================
+\subsection{Project Achievements}
+% This section intends to finish the case study background requirement from Moodle
+% by discussing the different parts of the project and what they do. This can be
+% the most technical part of the dissertation as it is supposed to provide context
+% in terms of what we built.
+By the end of the project, the team had achieved all of the initial goals set out by the client - creating a fully functional event sourced financial platform.
 
-It was decided that sprints would be two weeks in duration. This provided two iteration cycles between each client meeting to stop and re-evaluate priorities depending on how work was progressing, and allowed us to re-adjust at the half way point before a 'Release' to the client. It also put a tighter time-bounding on the work items meaning that there would not be a sudden rush to complete all the required tasks in the last week before the meeting, and rather the work would be evenly spaced out between client meetings.
+The final system is composed of many different smaller components. Each of those components is described and listed below.
 
-At the start of each sprint, once the team had prioritized issues based on client feedback and the input of the product owner, the team used planning poker to assign weights of XS, S, M, L, XL to each issue. This meant that more/less resources could be assigned to each issue as was necessary. Once planning poker was complete, each member was assigned to an issue or multiple issues, and in some cases for larger issues, multiple team members were assigned to a single issue. This would be by verbal agreement as the GitLab instance did not support multiple assignees to a single issue.
+\subsubsection{Event Bus and Superclient}
+The event bus is the core of the entire system, it is the single source of truth where all events are processed and distributed throughout the system - the mechanisms and API exposed by the event bus enable the consistency, multiple instances of services, redelivery and rebuilding functionality of the system.
 
-Stand-ups were used when all team members were physically present at the University. However, it wasn't fully feasible as many team members would be working from home in their own time, and thus synchronizing stand-ups was difficult out of University hours. Stand-ups would take place every Wednesday as the team would always meet on that day.
+In particular, the event bus is a Rust \cite{rust} application built using an actor architecture. It provides a websockets API for clients to register, query, acknowledge, observe and produce events. Every event is persisted to Kafka \cite{kafka} as a primary datastore for the events and to Couchbase \cite{couchbase} for later querying.
 
-At the end of each sprint, the team would meet together to carry out a sprint retrospective to gain an understanding of what progress each member had made during the sprint. Each team member would also contribute with what they thought worked well, didn't work well, and what could be improved for the next sprint. This allowed the team to plan the next sprint so that it would remedy any problems which were raised during the retrospective. Once the retrospective was complete, the team then began planning the next sprint and this process was repeated.
+Through the team's acknowledgement mechanism, the event bus can guarantee that all events are processed and can redeliver events if they are not. Further, through the team's consistency mechanism, the event bus can ensure ordering between events that mutate the same state without requiring knowledge of the event contents. Multiple instances of services can connect and interact with the event bus while avoiding duplication of processing - this horizontal scaling of clients is enabled by the sticky round robin mechanism.
+
+Another key component of the system is the superclient - a bespoke microservice framework - the superclient replaced earlier iterations of event bus clients and client libraries written in Java.
+
+Services are written in Lua \cite{lua} scripts and loaded by the superclient, taking advantage of APIs exposed to the Lua scripts to interact with events, register REST endpoints and handle state rebuilding. Motivated by a desire to increase productivity and reduce iteration time when working on event bus clients, the superclient vastly decreases complexity of services and the amount of code that needed to be maintained compared to the previous Java versions.
+
+Like the event bus, the superclient is a Rust application built using an actor architecture. It shares code with the event bus that allows for all JSON messages to be validated against schemas.
+
+In order for services to provide fast responses to requests made to their REST API - they require ephemeral storage to store the state represented by sequences of events - this is enabled by the Redis \cite{redis} API exposed by the superclient.
+
+\subsubsection{UI and UI Backend (or Backend for a Frontend/BfaF)}
+The UI is a React \cite{react} frontend that acts as the central user interface for the project through which end-users can use the financial platform.
+
+The BfaF is a Flask \cite{flask} application written in Python that acts as a gateway between the various microservices and the user interface.
+
+\subsubsection{Java Client Library and Legacy Services}
+Before the development of the superclient, the three required microservices were written in Java. In order to encourage code re-use, a shared client library was created that would handle the interactions between the services and the event bus.
+
+The client library provides a sane API for Java-based services to communicate with the event bus, including registration, consistency, receipt handling, event production and processing. It was fully unit tested with 100\% coverage. Testing such as this is very important in critical systems such as those used in financial and medical contexts, this is shown clearly in the case study of an embedded insulin pump \cite{embedded-insulin-pump}.
+
+This client library was used in the three required microservices initially written in Java. Each service provided a REST API to abstract complex business logic and service interactions from the user interface backend and had behaviour-driven testing.
+
+%==============================================================================
+% From Moodle:
+%  Several sections that reflect on your experiences during the team project.
+%  Each section should discuss one theme, characterised by incidents or events
+%  that occurred during the team course of the project from which you learned
+%  (approximately 12-15 pages).
+%==============================================================================
+\section{Software Development Methodology}
+\label{sec:software-development-methodology}
+% This section aims to discuss our software development methodology, how we used
+% agile, how we worked together, etc.
+The team decided very early on to adopt an Agile \cite{agile} methodology of project management. This was to gain experience with working in an Agile team, but also allowed for rapid iteration and the ability to keep track of what was being delivered with the ever-changing requirements of such an experimental project.
+
+\subsection{Scrum}
+The team decided to adopt Scrum - an Agile methodology that focuses on establishing what will be worked on in set time-periods known as \say{Sprints}.
+
+Following a team discussion it was decided that sprints would be two weeks in duration. This provided two iteration cycles between each client meeting to stop and re-evaluate priorities depending on how work was progressing, and allowed the team to re-adjust at the half way point before a client meeting. It also put a tighter time-bounding on the work items which eliminated any sudden rushes to complete all the required tasks in the last week before the meeting. Instead, work would be evenly spaced out between client meetings.
+
+Stand-ups were used when all team members were physically present at the University. These involved a short discussion where each team member would quickly share the progress done from the time of the previous stand-up. This was advantageous in planning further meetings and resolving conflicts in the current sprint. Team members could get attention of the Scrum Master who would facilitate the unblocking of tasks where required. Stand-ups would take place every Wednesday as the team would always meet on that day; it was important that stand-ups were relaxed and informal, yet happened consistently to allow proper progress updates.
+
+At the end of each sprint, the team would meet to carry out a sprint retrospective. Retrospectives involve each team member contributing what they thought worked well, didn't work well, and what could be improved for the next sprint. By performing retrospectives, the team was better able to plan the next sprint so that it could address any problems which were raised and prevent them from recurring. Once a retrospective was complete, the team then began planning the next sprint. Retrospectives were key in the team's transition from pair programming to mentored issues (discussed in more detail in a future section \S\ref{sec:knowledge-silos}).
+
+\subsection{Team Roles}
+After the initial client meeting, team roles were decided on for the project. Team roles are important to ensure that each team member is aware of their responsibilities and that all tasks are completed. One of the things that was done well was our choice of well-defined official roles that would stick for the project, but allowing the team to be flexible in terms of unofficial roles taken on.
+
+The roles here are not necessarily indicative of the full effort that was put in by each team member and their contributions (no role was intended to be that member's only contribution to the project), but they detail what the intention for their role was, how this morphed during the project and whether or not this was the best fit for the person retrospectively.
+
+\subsubsection{Scrum Master}
+Patrick took on the role of \say{Scrum Master} which involved managing sprints, retrospectives and facilitating the team in completing their tasks, as well as completing some tasks himself. This was a good fit as Patrick had some previous software industry experience and was able to draw upon this and further his knowledge of agile processes, efficiently managing and facilitating the project.
+
+\subsubsection{Product Owner}
+Connor took on the role of \say{Product Owner}, gathering project requirements and acting as the liaison between the team and the client. Product Owner duties typically involved providing a progress report at the end of each sprint and being the point of contact for the client. Connor was an excellent fit for this role as he is an effective communicator and had an interest in furthering his knowledge of agile processes. He was able to effectively bridge the gap between the team and both Avaloq and the University.
+
+\subsection{Planning Poker/Estimation}
+At the start of each sprint, the team spent time prioritising tasks based on client feedback from the Product Owner and each team member's understanding of their respective components and what needed completed for each component in the sprint.
+
+Once this was done, a subset of tasks were chosen - the ones with the highest priority. The difficulty of these tasks then had to be estimated. In order to achieve this, the team played Planning Poker \cite{planning-poker} to assign weights (t-shirt sizes) of XS, S, M, L, XL to each issue.
+
+Planning Poker is an estimation process that spans multiple rounds. In each round, every team member assigns a weight to a issue. Once all weights have been assigned, the team discusses the differences in their assignments. This provides an opportunity for the team to reconcile any misunderstandings about an issue and the complexity of it. Once all team members reach a quorum, the process proceeds to the next issue.
+
+Once Planning Poker is complete, each member was assigned to an issue or multiple issues. The amount of work assigned in any given sprint was influenced by the output of previous sprints - once development had been underway for some time, the team had a good idea of the amount of work that could be completed in a sprint and could decide to modify the sprint scope to be more achievable with this in mind.
+
+\subsubsection{Reflections}
+The team's use of Planning Poker was good, but could have been more emphasised. It was used a handful of times, but not in every sprint and this is a potential point for improvement as there could have been a more accurate estimation of the team's velocity by having the difficulties of tasks voted on democratically.
+
+One of the main pain points of using planning poker was that the t-shirt sizes represented arbitrary measurements. Often the difficulties of tasks were difficult to quantify and/or there was not a large enough spectrum of options to give a realistic depiction of the difficulty of a particular task. This was why the team moved from S, M, L to XS, S, M, L, XL, to give a broader range of options and give more accurate estimations.
+
+Further, in early stages of the project, team members did not yet have experience in all parts of the project and therefore struggled to estimate difficulty of tasks in those components.
+
+Another source of confusion was that the team were often not clear whether they were scoring the priority or importance of the task as opposed to the difficulty. Planning poker was used to score difficulty, but perhaps a more effective explanation of how to score tasks should have been given before commencing the rounds of planning poker.
+
+All considered it was beneficial to the team to be able to get on the same page about specific tasks, and to adjust the scope of a task if quorum could not be reached on its difficulty. It forced more knowledgeable members on a particular issue to speak about it, and open it up to be a mentored issue (see Tackling Knowledge Silos \S\ref{sec:knowledge-silos} section). Although it was not executed perfectly, it was beneficial to have over the alternative, which would have been no estimation of difficulty or estimation being done by just the Scrum Master.
+
+\subsection{Planning Meetings}
+One of the ways in which the team responded to unforeseen challenges or complexity was through so-called "planning meetings". Planning meetings included all members of the team and typically involved sketching out ideas and potential solutions to problems. These potential solutions could then be discussed and debated. By finding any holes in a potential solution before implementation, the team was able to avoid spending time on implementation that would need to be reworked.
+
+In particular, planning meetings came in useful when planning the implementation of the system's acknowledgement and sticky round robin mechanisms, since these were some complex elements of the system design that affected both the event bus and the client library/superclient.
+
+%==============================================================================
+\section{Client Communication}
+\label{sec:client-communication}
+% This section should cover our interactions with the client, how we found it, what
+% techniques we use to deal with the client, etc.
+Beginning from the initial brief, the project was framed as a research project and had little in the way of clear goals or restrictions on how the project requirements could be satisfied. Therefore, a significant proportion of the project was self-guided and developed to the team's interpretation and vision for the platform. Due to this, limited assistance could be provided by the client - typically limited to prioritisation of features for future sprints.
+
+\subsection{Self-Guided}
+One particular challenge faced throughout the project was the limited involvement of the client. Client meetings were an opportunity to demonstrate progress to the client and receive feedback and prioritisation on work planned for future sprints.
+
+This presented difficulties but also advantages - it meant that when facing the inevitable problems that arise from building a distributed system, the responsibility to derive solutions and implement features lay on the shoulders of the team. However, this provided the team an opportunity to learn and gain experience in tacking unforeseen challenges. The self-guided nature of the project also resulted in scenarios where priorities needed to be shifted to meet client requirements that hadn't been fully considered.
+
+An example of an advantage provided by the self-guided nature of the project is the opportunity team members had to learn unfamiliar technologies and gain experience researching the problem. The team had independence to design and implement the system and make mistakes along the way. This is evident in the various iterations of consistency that the team debated before finding a solution that met all the requirements.
+
+\subsection{Bi-Weekly Updates}
+Another aspect of the teams client communication was with bi-weekly updates, this involved sending a progress report at the end of each sprint with details on the team's current issues.
+
+Keeping the client informed was key to mitigating problems with communication as it ensured that there was plenty of time to make changes between sprints and not at the client meetings by which point resources could have been wasted. One example of this is the number of services that the client requested, there was initial misunderstandings within the team regarding how many services had to be built. Keeping the client informed with the team's plans allowed these misunderstandings to be caught early and for plans to be adjusted.
+
+\subsection{Requirements Gathering}
+Gathering project requirements was a key component to ensuring the success of the project - misunderstandings and poor communication can derail a project so it was vital that this be avoided.
+
+In some cases, poor requirements gathering can cause incredibly expensive mistakes, such as the incident with the Ariane 5 launcher \cite{ariane-5}. Whilst the stakes were considerably higher in case of failure in that project than this merely experimental project, the same principles about misunderstandings between different requirements proved to be fatal. In the Ariane 5 case, re-use of earlier components without checking that it met the new requirements caused a failure.
+
+Despite the frequent updates of the team's progress being provided to client, during some meetings, emphasis was placed on different parts of the initial requirements which lead to restructuring of plans in earlier sprints. As the project progressed and the team better understood the initial requirements, disruption to existing plans subsided. Various techniques were employed to help keep track of and understand fully the requirements of the project.
+
+Most requirements provided by the client involved lots of planning and design work before implementation - such as consistency, multiple instances of services and redelivery. Therefore, throughout the project, the team brainstormed various solutions that could be implemented in order for the system to meet the requirements. After some time, the team typically had various potential solutions to any given problem, these were discussed, prioritised and further inquiries were sent to the client to confirm the viability of a given solution.
+
+However, given the project was intended for research, the majority of requirements came from brainstorming and as such, there was little need for questionnaires or other typical requirements gathering techniques.
+
+In preparation for client meetings, presentations were created that would inform the client of progress since the last meeting and provide an opportunity for in-person feedback to be gathered regarding the implementation of requirements; plans for future implementations; and priorities. Clarification of priorities was particularly important as the open-ended nature of the project allowed for a variety of avenues of potential exploration and improvement. Having a firm idea of which avenues the client wanted explored helped avoid wasted resources. By demonstrating progress through presentations and live demos, we were able to better explain complicated concepts visually - such as our approach to consistency - and receive better feedback.
+
+%==============================================================================
+\section{Tackling Knowledge Silos}
+\label{sec:knowledge-silos}
+Due to unfamiliarity with the key concepts surrounding the project - such as event sourcing and microservices - some team members initially struggled to understand the project requirements. As a result, the initial phase of the project involved detailed research into key concepts. Resources such as a microservices book \cite{microservices} which was recommended by the client were used. Once the team were more familiar with the concepts, work began on the design of the system.
+
+It was important that the team avoided knowledge silos as much as possible, due to the distributed nature of the system being built. If one person only had knowledge of one component, this would not be enough to effectively iterate - particularly in cases where many features were required in one component during a sprint or where a team member was unable to work. Initially, it was decided that, to avoid this, each member of the team was encouraged to complete a task on more than one component of the system - ideally as many as possible. In doing so, every member was able to gain an understanding of each component and the connections between them in the entire system. In addition, it forced the team to write understandable code as it would be extended by other team members. It also provided an opportunity for any suggestions or improvements to current functionality to be suggested and implemented. This was facilitated through use of GitLab's Merge Request review functionality - allowing the team members familiar with a part of the system to comment on merge requests and provide feedback on others' changes.
+
+Throughout the project, this approach struck a nice balance between encouraging ownership of parts of the system (resulting in higher quality code) and ensuring that no part of the system was a black box. In future projects, this would be a useful approach to continue to utilise.
 
 \subsection{Pair Programming}
-Initially, it was intended that pair programming would be employed to tackle certain issues. This involved having two team members working together on a single issue. This was beneficial initially as it meant that every member of the team could get hands-on experience with unfamiliar parts of the codebase with some help where required.
+Initially, it was intended that pair programming \cite{pair-programming} would be employed to help avoid knowledge silos. This involved having two team members working together on a single issue, with one typing and the other guiding/suggesting what to do.
 
-However, this was often quite time consuming and meant that too much assistance was given where there was a knowledge gap, and the true benefit for the less knowledgeable member was not realized. Pair programming was also difficult to schedule with multiple team members, and subsequently, mentored issues were employed more frequently.
+This was beneficial as it meant that every member of the team could get hands-on experience with unfamiliar parts of the codebase with help where required from someone who was more familiar with that component. This allowed knowledge sharing in a way that was not achievable with message-based communication over Slack.
+
+However, this was often quite time consuming and meant that too much assistance was given where there was a knowledge gap, and the true benefit for the less knowledgeable member was not realised. Pair programming was also difficult to schedule with multiple team members due to other commitments, and subsequently, pair programming lost out, the team being in favour of mentored issues.
 
 \subsection{Mentored Issues}
-Mentored issues involved a member of the team writing instructions for an issue, providing a rough outline of the changes required in different parts of a codebase and splitting the task into smaller chunks. The instructions were often intentionally vague to allow the mentee to do as much personal research and possible before asking for help on problematic aspects of the issue. The mentee would then create a merge request which a mentor could then view, suggest potential solutions and correct slight errors. This process was then repeated as much as was necessary until the issue was solved and the branch was then merged.
+After some attempts with pair programming, a mentored issue approach was preferred. Mentored issues involved a member of the team writing instructions for an issue, providing a rough outline of the changes required in different parts of a codebase and splitting the task into smaller chunks. The instructions were often intentionally vague to allow the mentee to do as much personal research and possible before asking for help on problematic aspects of the issue. The mentee would then create a merge request which a mentor could then view, suggest potential solutions and correct slight errors. This process was then repeated as much as was necessary until the issue was solved and the branch was then merged.
 
 The mentored approach was much more beneficial than the pair programming approach as it allowed time to be managed much more efficiently. It did not require two people working concurrently on the same task and gave the mentor the ability to look at the merge request whenever was most suitable for them and meant that it was not necessary to schedule face-to-face meetings with the mentee.
 
 It was also beneficial as it forced the mentee to carry out as much research as possible on the current issue and meant that the mentee learned more about the code and the technologies in use compared with a pair programming approach.
 
-From the perspective of the mentor - mentored issues allow for a balance between providing too much assistance and allowing the mentee to do some research and learn by doing. It is also beneficial as it doesn't require meetings between the team members which can be hard to schedule.
+From the perspective of the mentor, mentored issues allowed for a balance between providing too much assistance and allowing the mentee to do some research and learn by doing.
 
-\subsection{Learning Curves}
-Initially, some team members found the project difficult to understand. Most of the team were unfamiliar with the concepts of event sourcing and microservices. As a result, the initial planning also involved research using a microservices book \cite{microservices} which was suggested by the client. Once the team was more familiar with the concepts, work began on the design of the system.
+\subsection{Merge Request Reviews}
+Key to the success of mentored issues was the review feature of GitLab's Merge Requests. Once a merge request is opened, anyone with access to the repository can comment on specific lines of the "diff" - the changes between the branch the merge request is for and the master branch.
 
-When initially choosing technologies for this system, it was decided that the the event bus was to be written in Rust. This allowed the majority of the team to learn and experiment with a new language while still having support with any problems as one member of the team, David, had a large amount of previous experience with Rust. It was also decided that React.js would be used for the frontend, allowing team members to experiment with a new framework.
+This allows reviewers to identify issues with the proposed changes and to either give useful links or to give a correction / advice on why the particular line is unsuitable.
 
-It was important that the team avoided knowledge silos as much as possible, due to the distributed nature of the system being built. If one person only had knowledge of one component, this would not be enough to effectively iterate. To avoid this, each member of the team completed some tasks on every part of the system. This allowed every member to gain an understanding of each component of the system.
+In order to enforce a paper-trail of changes to the master branch, we enabled protected branches and disabled the ability for anyone to push to the master branch. This meant that any changes to the \say{production} version of the code for any repository had to happen via a Merge Request, and therefore meant that it would be reviewed. This meant that the overall code quality could be maintained to a high standard and gave more opportunity to catch bugs.
 
-Further, this gave everyone an opportunity to learn a new technology and also forced the team to understand code written by other team members so that any suggestions or improvements to current functionality could be implemented.
+Upon reflection, the team would have enabled protected branches and enforced Merge Request reviews from the start, although this can sometimes be counter-productive in the initial setup of a new repository and for setting up things like CI scripts that only run on the master branch etc.
 
-%==============================================================================
-\section{Consistency}
-\label{sec:consistency}
+\subsection{Impact}
+One example of a disparity of knowledge was when the team started development - there was immediately a significant knowledge difference between David and the rest of the team on the Rust programming language. The team's first attempt at solving this didn't use any of the above techniques, the team simply assigned Patrick an issue in Rust and trusted him to complete it. Because Patrick is an adept programmer with real world experience, he quickly picked up Rust with some assistance from David and could complete his issues. While in this case someone teaching themselves a new technology in an unstructured way was a success, the team could have used mentored issues from the beginning, had they been more aware of the technique. This would have avoided assigning a potentially daunting task to an individual team member early in the project.
 
-One of the fundamental challenges when building distributed systems is ensuring consistency - this is a challenge faced regardless of whether the system is built with an event-sourced, modern three-tier, sharded, lambda or streaming architecture.
+The first attempt to implement techniques to solve knowledge differences was when Connor and David tackled issues using pair programming. The team hoped that this would allow Connor to get up to speed on Rust by learning from David. However, the team felt that requirement that team members meet up to practice pair programming effectively was too limiting due to their different schedules.
 
-Without an approach to handle consistency, distributed systems will run into a variety of problems. In this implementation specifically, it is desirable that the event bus has no insight into the events it is processing, this introduces further difficulties to any desirable solution.
+In retrospect, the team's issues with pair programming also came about because the team tried to use pair programming in situations where the knowledge gap between the pair was too large. The team could have revisited pair programming after using mentored issues to reduce the knowledge gap between members. If the project were to be repeated then after both being mentored by David in Rust, Frank and Connor could have tried pair programming with each other on Rust issues in order to relieve pressure on David from having to write mentored issues.
 
-The primary issue resulting from a lack of consistency in a distributed system is that two clients can mutate the same state simultaneously.
+Following on from the success David and Connor had found after switching from pair programming to mentored issues, Frank began also working on mentored issues relating to the event bus. To begin with Frank found these issues challenging but completed them successfully. The use of online Rust documentation \cite{rustlangdocs} along with examples on sites such as StackOverflow \cite{stackoverflow} allowed Frank to figure solutions to the issues with more independence, although help was always available via Slack or merge request comments when necessary.
 
-A traditional example of a problem related to consistency is double-spending. While double-spending is typically associated with digital currencies, it applies to many distributed systems and describes the state becoming inconsistent between participating nodes.
-
-In the context of this event-sourcing platform, there are multiple potential issues that could result from poor consistency:
-
-\begin{itemize}
-    \item It is important that a malicious or poorly implemented client cannot send events that would spend the same \pounds1 from one end-user's balance multiple times.
-    \item It is also important that if two events are sent they are received in the same order by all clients, this stops any given end-user from being mistakenly overdrawn if a client receives a withdrawal event before a deposit event.
-\end{itemize}
-
-Any solution for this problem must depend on the protocol for sending events, since the content of any given event cannot be known to the event bus.
-
-Ensuring consistency is inherently a trade-off with speed and this will become evident as this paper discusses the various approaches that were considered for the event bus.
-
-\subsection{Blockchain-Inspired Approach}
-Initially, a blockchain-inspired approach was chosen. The blockchain \cite{blockchain} is a data structure that originates from Bitcoin \cite{bitcoin}, a digital crypto-currency, inspired by existing data structures like Merkle Trees \cite{merkletree}.
-
-Blockchains are similar to singly linked lists except that contained in each node is the hash of the previous node, thereby enforcing an immutability of all nodes before the head of the list. Bitcoin builds on this by introducing a proof-of-work system so that the next head node can be chosen without the need for a centralized authority. This isn't required in the event bus implementation given that the event bus is a centralized authority.
-
-The initial approach conceived was for each event to contain the hash of the previous event, enforced by the event bus.
-
-\input{figures/consistency-1}
-
-When an event was received that contained a hash that did not match the previous event expected by the event bus, then it would be rejected, and the client would be sent a rejection message containing the correct, expected hash. By including the expected hash in the rejection message, this implementation would still allow clients to successfully submit new events while not listening to all events.
-
-One issue with this proposed approach is that a client that listens for \texttt{PendingTransaction} events might still have many queued to process and that despite having the correct next hash (from a rejection or through peeking at the queue) could produce a new event that contradicts one of the events still queued.
-
-\subsection{Blockchain-Inspired with a Sequence Number}
-In order to remedy this, inclusion of a sequence value per event type was proposed. This value would not be sent to clients with the hash on rejection and would therefore require that a client register for and process all events of that type in order to have the correct value.
-
-The sequence value provided would start at zero for any given event type and be incremented by one for any subsequent event of that type.
-
-\input{figures/consistency-2}
-
-This however would not solve the largest issue with a blockchain-esque approach, by enforcing a global ordering, if \(x\) events were sent simultaneously, then there would be a minimum of
-
-\begin{equation}
-    \frac{ x (x + 1) }{ 2 }
-\end{equation}
-
-attempts required to send them all and therefore could cause the event bus to be very slow in processing events. The derivation of this is from the standard mathematical formula for the summation to N \cite{sumton}.
-
-The reasoning behind this is that if there are 4 events sent concurrently, then 3 must be rejected. Then those 3 are sent again as re-tries, and 2 are rejected. Those 2 are sent, one is rejected and then the final one is sent and finally accepted. This means the total number of attempts is
-
-\begin{equation}
-    4 + 3 + 2 + 1 = 10
-\end{equation}
-
-which is equal to
-\begin{equation}
-    \frac{ 4 \times 5 }{ 2 } = 10
-\end{equation}
-
-\subsection{Sequence Key/Value Approach}
-Building on the inclusion of a sequence number, the most recent solution to this problem involves the inclusion of both a sequence key and a sequence value - but no hash. A sequence key would be used to uniquely identify any events that could conflict. For example, in the context of a financial application, an account number could be used as a sequence key as any events that modify the state of an account should depend on the most recent state of that account.
-
-\input{figures/consistency-3}
-
-In this scheme, the sequence value would function similarly to before, however, the sequence value would be incremented for each subsequent event of the same key rather than by event type. Whilst this does put burden on the client application to specify the sequence key for an event, it does reduce the number of retries that will have to, on average, occur for any given event.
+After the team had decided to continue development of the superclient and deprecate the Java microservices (see next section \S\ref{sec:project-structure}) there were many new issues suitable for a mentored approach. Frank found that during the development of the superclient and the implementation of consistency in the event bus, the assistance needed with mentored issues was decreasing and his knowledge of Rust was increasing. The use of mentored issues had reduced the workload on David while allowing him to oversee the changes using GitLab merge requests. By the end of the project, Connor and Frank had both gained a solid knowledge in Rust but more importantly had gained invaluable experience in how to apply existing skills in a new environment.
 
 %==============================================================================
-\section{Correlation}
-\label{sec:correlation}
-
-Another required feature of the event bus implementation is the ability to trace units of work throughout the system. A unit of work consists of multiple events that, when combined, represent a single state change. An example of this would be a \texttt{PendingTransaction} that produces an \texttt{AcceptedTransaction} or \texttt{RejectedTransaction} event.
-
-\subsection{Correlation Tracking}
-Implementation of correlation tracking involved modification of the event bus' client library to include a GUID (Globally Unique Identifier) with each event. However, if an event is related to a previous event and that previous event was provided, the correlation ID of that event will be used instead of generating a new ID. This allows look-ups of related events to happen by grouping events by their correlation ID. This is a good way to accomplish being able to trace a transaction through the system as it can be comprised of multiple events, and this was a requirement that Avaloq provided the team with at a later customer meeting.
-
-\subsection{Session Tracking}
-In addition to correlation tracking, this implementation also includes session tracking which can be used to link all events produced by a given instance of a service. This could be useful if a bug was introduced into a microservice and it was desirable to find which events it produced during this time.
-
-%==============================================================================
-\section{Sticky Round Robin}
-\label{sec:sticky-round-robin}
-
-In the spirit of microservices, it is a requirement that multiple instances of a given service be able to run simultaneously in order to horizontally scale the processing performed by that service.
-
-For this to be supported in the event bus implementation presented by this paper, it is required that a solution be developed that allows for this functionality while working within the constraints defined by the consistency solution.
-
-\subsection{A naive approach}
-A naive approach would be to allow many instances of a given service to connect without any functionality in the event bus to support this. However, this approach would be prone to problems.
-
-In this scenario, the event bus would send any given event to all connected clients. If there were multiple instances of a service running, then both instances would receive the event and begin processing. This could result in duplicate events being produced. At best, this would waste processing power; at worst, this effect could multiply (more duplicate events being processed more than once producing more duplicate events) and cause a self-inflicted Denial of Service attack on the event bus.
-
-\subsection{Round Robin approach}
-Initially, a round robin approach was considered, where clients would register which type of service they represent. Then, when an event is to be sent to a service type, the event bus would perform a round robin selection on the clients of that type (i.e. it would cycle through each client).
-
-One theorized issue with this solution is in the interaction with the consistency implementation. If events with the same consistency key are sent to many different clients then none of them will be able to keep track of the expected consistency value.
-
-\subsection{Sticky Round Robin}
-In order to solve the issues with Round Robin and consistency, an alternative approach - Sticky Round Robin - was implemented. Sticky round robin builds on the previous solution by allowing a client to be "stuck" to a consistency key. Once an event for a given consistency key is sent to a client (of a certain service type), then this information is stored and any subsequent events being sent to that service type for that consistency key will be sent to that particular client.
-
-Once a client disconnects, subsequent events with that consistency key are distributed using the normal Round Robin algorithm until they are stuck again to a different client.
-
-%==============================================================================
-\section{ACKs}
-\label{sec:acks}
-
-Another issue related to the operation of the system is ensuring that messages are always processed at least once if services go down or the network fails. If a event was received by a service and then that service crashed during the processing or was unable to respond with any subsequent events, then this could put the system in an invalid state.
-
-In order to solve this issue, a system of sending acknowledgements was added, along with making use of shared data stores within a type of service to share state.
-
-When a service starts up, it will have the timestamp of the last message it (or any other services of that type) received from the event bus (this comes from the data store). By using the most recent timestamp of all services of that type, this implementation avoids services querying the event bus for events that were processed by another instance in the interim.
-
-The service then queries for new events since that timestamp. All acknowledged events from the event bus are returned because since they were acknowledged, it is known that they do not need processed. This allows the state to be caught up with anything that has happened. If the database is entirely empty and a full rebuild is being performed, then the timestamp will be zero and this will allow a full rebuild.
-
-During any downtime, the event bus will store unacknowledged events and the events are then redistributed using the Sticky Round Robin system.
-
-In order for the above system to work, acknowledgements should only be sent once all processing of an event has been completed, including all database transactions and new events that need sent. The event bus removes the unacknowledged event from its internal state when an acknowledgement is received.
-
-%==============================================================================
-\section{Persistence and Couchbase}
-\label{sec:persistence}
-One of the major requirements of the event-sourced system is to persist the events in such a way that it has the ability to replay or redeliver events that may have happened before a client requests them. There is also a requirement for these events to be stored outwith the event bus itself, to reduce the risk of data loss in the case of an outage or complete failure of the event bus server(s). The events provide a critical audit log, and in production use, the persistent data storage would be using disks in a RAID 1 configuration or similar and regularly backed-up to magnetic tape.
-
-However, in the case of re-delivery, it may be required that thousands of events be redelivered to a service to allow them to catch-up. Therefore a data store that would perform fast, yet give the reliability and enterprise-level support expected by the client is necessary.
-
-The obvious choice was Couchbase. Couchbase is an enterprise-grade NoSQL database with many extra features such as clustering, XDCR (Cross Data-Centre Replication), node fail-over, cluster re-balancing and many others that would be ideal for a large-scale financial client like Avaloq to have operational peace-of-mind.
-
-Couchbase is a NoSQL database, and therefore does not store relations or schemas, however, as only events are stored and not any relationships between them, this is not an issue. It also means there is increased performance when retrieving the events and the real benefit would be felt if the system were performing at capacity, servicing hundreds or thousands of requests per second.
-
-The event bus uses the \texttt{couchbase-rs} library, a wrapper on top of \texttt{libcouchbase}, to communicate with it and persist the events. Consistency between the event bus and Couchbase is ensured by not returning the receipt for that event to the service until the event is persisted in Couchbase. Whilst this does introduce a fundamental single point of failure, for the purposes of this experimental project, it allows us to ensure the data does not become out of sync.
-
-%==============================================================================
-\section{Microservices}
-\label{sec:microservices}
-Part of the assigned task was to have multiple microservices, each with their own area of responsibility, communicating with each other via the event bus.
-
-Figure 4 shows a diagram of the system's architecture, showing the different components and over what protocol they communicate.
+\section{Project Structure}
+\label{sec:project-structure}
+% This section aims to discuss the project itself and the choices and decisions
+% we made, the impacts of those decisions, that sort of thing.
+As a self-guided project, all the technology choices and architectural decisions were made by the team. This section discusses the various choices and the impacts of those choices.
 
 \input{figures/microservices}
 
-\subsection{Design}
-The above design was chosen for various reasons. First of all, in order to demonstrate the system, one of the requirements was to have a minimum of three microservices. The team reviewed the flow of a transaction and how the different entities could be split over multiple microservices.
+\subsection{Technology Choices and Impacts}
+Throughout the project, the team faced a number of decisions regarding the technologies used to build the system. Due to the nature of the project, the system was composed of many different components with varying functions and as such it was advantageous to choose technologies that suited the requirements of the component. Many factors were considered in deciding on technologies to use for a given part of the system and research was conducted into the technologies before decisions were made.
 
-The entity types identified were user accounts (i.e. a username and password), money accounts (i.e. things which hold a balance) and transactions. It made logical sense for each microservice to have delegated responsibility or authority over just one entity type.
+Once the team had established and refined the requirements, it was necessary to decide on the languages and frameworks that were to be used. Firstly, the team had to decide which languages should be used to build the event bus and the microservices. During a team meeting, the team used sticky notes to write out advantages and disadvantages of certain potential technologies.
 
-For example, the user service has authority over user registration and produces/consumes events relating to registration and account creation. The user service in this system also is responsible for maintaining the mapping between user accounts and money accounts.
+Some of the main considerations when choosing technologies included existing knowledge; availability of documentation and support; performance and ease of use. In addition, the ability to create fault tolerant systems was a key consideration - many of the initial requirements centred around ensuring reliability and resilience - therefore, examples such as the multiple levels of redundancy in place in the Airbus 340's flight control system \cite{airbus} were used to influence technology choices and system architecture design.
 
-The accounts service has authority over the creation of and any changes in balance of money accounts. The transaction service is responsible for initiating and keeping track of the state of transactions.
+\subsubsection{Event Bus}
+It was decided that the event bus would be written in Rust. This allowed the majority of the team to learn and experiment with a new language while still having support if they encountered any problems as one member of the team, David, had previous experience with Rust.
 
-Paying particular attention to the accounts service, by having it being the sole dictator for changes to balance and using the consistency enforced by the event bus, one can be sure that, despite the asynchronous, distributed nature of the system, it will maintain consistency and will not allow money accounts to enter an invalid, overdrawn state and the ordering of the account statement can be guaranteed.
+Rust's balance between safety and performance is one of the major reasons why it was selected for use in the event bus, this is similar to Tilde, an analytics startup, who chose to use Rust when implementing their project \cite{tilde} for the safety guarantees and performance gains.
 
-\subsection{Ephemeral storage}
-Each service has available to it an ephemeral storage, in the form of a Redis database. The service can maintain a state of its own, but since the event bus can replay events, there is no need for this state to be backed up and guarded as a critical piece of data. The state can always be restored by deleting the database and forcing a re-delivery.
+\subsubsection{Microservices and Experimental Development}
+Initially, Java was chosen as the language to use for the microservices due to:
 
-This storage is not used as a cache, as it's not replacing computation by looking-up results. It acts as persistent storage, however the state that it holds can be rebuilt at any point without worries, so the data does not need to be guarded as sacred, and if the data is corrupted, it can be wiped clean and replayed up until the point of corruption.
-
-\subsection{Initial Implementation}
-The initial implementation of the microservices was done in Java, using the Dropwizard framework. The idea was to have a separate repository for a shared client library that would handle connections to the event bus and would implicitly take care of consistency, correlation and initializing websocket connections/any websocket messages.
-
-The team soon understood and produced the boilerplate code that was required for making new microservices. These services had each used their own PostgreSQL database as ephemeral storage, rather than Redis (as was later changed to with the Superclient - see below).
-
-The client library was tested with JUnit and reached a test coverage of 98\%. The individual services were tested with Gherkin feature tests running with the Cucumber test framework. This allowed the initial user stories which had been detailed for the microservices to be converted into acceptance tests which were used to verify the correct operation of each microservice.
-
-\subsection{Superclient}
-While the initial implementation of the microservices in Java worked and was reliable, it had various downsides that led to slowed iteration:
-
-\begin{itemize}
-    \item While each service did depend on the client library (also written in Java), due to the nature of the client library's design, implementations of many features - such as consistency, ACKs, and querying - would require many changes to the clients themselves. This resulted in a major slowdown to the time required to roll-out new features and test ideas, if the number of services was to increase, this slowdown would also increase.
-    \item Services were hard to build. Due to the verbosity of Java and the functionality required by each service - namely a HTTP server with REST endpoints and some variety of persistent storage - each service was quite large. If a new type of service was envisioned to supplement the other services or test an edge case in the implementation of other features, it would not have been practical to build due to time constraints.
-\end{itemize}
-
-For these reasons, an experimental project was started that would replace all of the clients and the client library with a framework for building microservices. This framework would handle all the necessary components required by a service - an event bus connection; a webserver; persistent storage - and delegate all processing or handling of events and requests to a scripting language that handles only the changing business logic of each service.
-
-Dubbed the superclient, this project was written in Rust and took advantage of the team's existing knowledge from working on the event bus and allowed for code re-use through a shared common library between the projects. This common library also contained the schemas used to validate the JSON messages - by using the same schemas, it was ensured that the superclient and event bus would always send valid JSON to each other.
-
-It was decided that the superclient embed Lua to allow for the swappable service scripts. A minimal interface was exposed to Lua, where events could be sent and callbacks could be registered for new events, receipts for sent events and for rebuilding the state after downtime. Further, two functions were provided that would allow the services to query and fetch from a Redis key value store, enabling each type of service persistence. Other helper functions such as logging were also included.
-
-After a handful of weeks in development, the superclient was ready to replace the existing Java infrastructure. In production, the services demonstrated the same reliability and conversion from the existing Java applications to small Lua scripts was quick and painless (typically taking only a day compared to the one-to-two weeks a Java service took to develop) - demonstrating the ease of use and rapid development enabled by the superclient.
-
-Further, the superclient was easier to maintain - while an imperfect metric, the superclient was around 1700 lines of Rust code, and each service between 100-200 lines of Lua - this is a stark constrast to the Java applications, where the client library clocked in at 1800 lines of Java code, and each service between 600-800 lines. This far reduced the surface area for bugs and the amount of code that each team member would need to understand to work productively on the services.
-
-This experimentation embodied one of the core ideas of the development team - if a team member can think of a way to improve the way something is done or implemented, then they are free to do so. This philosophy allowed the team to iterate quickly and not get bogged down with previous work that was unsuitable for current requirements. Due to the fact that this was a largely experimental project, new ideas and the will to execute on them were crucial to the success of the project.
-
-%==============================================================================
-\section{UI Backend "BFAF"}
-\label{sec:backend}
-The UI Backend or the "Backend-for-a-Frontend" (BFAF from now on), is a Python Flask app that acts as a gateway or proxy for the UI to talk to the other microservices. It is the only service that needs to be exposed on the public internet for the React.js front-end to call the backend services.
-
-\subsection{Design}
-When deciding how the information was going to be sourced for the UI, there were two conflicting approaches discussed and debated. The first advocated for the BFAF to act as its own service, speaking directly to the event bus and not interacting with any of the microservices - which act as processing nodes only. Alternatively, the second approach advocated for the BFAF to speak only to the microservices through their REST APIs and never to the event bus directly.
-
-The second approach would allow for the BFAF to query the internal state maintained by the services, reducing the processing required to build that state up itself from events directly. This would result in a faster, more responsive UI and was therefore chosen.
-
-\subsection{Implementation}
-The choice to implement the BFAF in Python using Flask was a simple one motivated by two key reasons: agility and simplicity. Python is a very flexible language that allows for rapid iteration on new features, so was the perfect fit for this project. The BFAF can be likened to a glorified load balancer with custom rules. It is a proxy layer for the backend services, and it translates the responses it gets into sensible responses that the React UI can understand.
-
-The BFAF has three main endpoints:
 \begin{enumerate}
-    \item Initialization - where the UI calls to get all the current state of the user's accounts.
-    \item Updates - where the UI opens a websocket connection with the BFAF and whenever there is a change to the account statements, a message containing the update is sent over the websocket connection to the UI.
-    \item Transactions - where the UI makes POST requests to move, deposit or withdraw funds.
+    \item Avaloq's existing infrastructure and code was written in Java, while not necessary, the team felt it would be beneficial to develop components in a language that the client was familiar with.
+    \item The team's familiarity with the language due to having done assignments in Java previously.
+    \item The availability of frameworks/modules for building microservices, such as Dropwizard \cite{dropwizard}.
 \end{enumerate}
 
-%==============================================================================
-\section{Rust}
-\label{sec:rust}
-Early in the project, it was decided that the core event bus would be written in Rust. As the project progressed, new components were also written in Rust. Rust is an uncommon choice in programming languages - particularly in third year team projects - therefore, this section will explain the reasoning behind this choice and discuss the greater Rust ecosystem for this type of project.
+The module Dropwizard \cite{dropwizard} was going to be used for creating the microservices, and provided a framework for creating HTTP routes, background tasks and database schemas out of the box.
 
-\subsection{Why Rust}
-On the Rust website, Rust \cite{rust} is described as:
+Although there were other suitable choices for building microservices, the team felt confident in Java and by developing a shared client library the team thought that code repetition could be avoided. Two members of the team built a very basic prototype microservice client library in Java using an existing websockets library in order to demonstrate that using websockets and Java together was feasible.
 
-\say{a systems programming language that runs blazingly fast, prevents segfaults, and guarantees thread safety.}
+After the first iteration of the microservice client library was completed, the library was used by multiple team members to create three different microservices - an accounts service, a transaction service and a user service. The object-oriented nature of Java and its use of class-based inheritance worked well with the concept of event sourcing.
 
-It was evident in the original requirements gathering with the client that the event bus would be a core component of the system architecture and potentially a bottleneck if it did not have sufficient performance. Furthermore, it was also clear that it would need to be highly asynchronous - relying heavily on threading, therefore it was desirable to have a language that provided a sane threading API that would help eliminate common problems in this area such as data races.
+The client library contained the \say{Event} class which could then be extended by each microservice, allowing each service to handle events uniformly in whichever way they wanted. This made early development of the client microservices clean and easy to understand and meant that the representation of events was the same across the system but events could be handled by different services in completely different ways.
 
-Based on these requirements, Rust was chosen. Rust has various properties that make it a good choice for this project, namely:
+Some time after Christmas, the team began to notice that the design of the Java microservices was causing some issues with implementing important features effectively. The client library was supposed to handle all shared functionality, but due to the complexity of implementing consistency and event re-delivery, many changes were required in each individual service to accommodate this.
 
-\begin{itemize}
-    \item Performance - Rust's primary innovation is in the borrow checker, a compile-time check that allows the language to avoid inclusion of a garbage collector (which would reduce performance) but also avoid requiring manual memory management which is often prone to issues.
-    \item Fearless Concurrency - by taking advantage of the type system and borrow checker rules, Rust also boasts compile-time guarantees that there are no data races.
-    \item Ecosystem - despite being a new language, Rust has a strong ecosystem around building server applications - various libraries, frameworks, tools and resources are available.
-    \item Fun/Learning - Rust is a new language that is receiving lots of interest from industry and therefore it is beneficial to gain experience in the language.
-\end{itemize}
+During a discussion about how to deal with these implementation challenges, David proposed continuing development of the current services while also attempting to create an experimental microservice framework which would handle everything except the pure business logic of the service. This framework would embed the Lua programming language - allowing the service logic to be loaded from a file that contained minimal code to satisfy the requirements of the service.
 
-For more information on any of the properties described above, it is recommended that the Fearless Concurrency \cite{fearless_concurrency} blog post be read.
+Development of the new superclient was initially carried out by David as additional work completed after he had finished his assigned tasks for the sprint. This was done in order to ensure that the experimental redesign of the system didn't impact development if the team deemed that the redesign wasn't suitable. There were some initial concerns within the team about whether the redesign was necessary and Patrick was worried that development time could have been spent better elsewhere. David reassured the team that he had finished his issues for the sprint and the work on the superclient was extra and that the extra effort would result in a lower overall workload in future sprints along with a much improved end product for Avaloq.
 
-\subsection{Ecosystem and Frameworks}
-Despite being a new language, Rust has a quickly growing ecosystem of libraries and frameworks. Rust does not mandate a threading model in the language itself or in the standard library - therefore users of the language are free to implement any threading model that best suits their application.
+After two weeks of the superclient being developed as an experimental concept it was demonstrated to the team by David replacing one of the old Java microservices. The team weighed up the pros and cons of each microservice system before deciding which to continue with. The old Java services were functional, but making any large scale changes (such as consistency and redelivery which were still in progress) would have required significant changes. Choosing the superclient required scripts for two remaining services to be written but because many core features did not require re-implementation this would not take a significant amount of time - Lua services were often 80-90\% shorter than the Java equivalents.
 
-One of the major underlying components that power both the event bus and the superclient is Tokio \cite{tokio} and Futures. Futures is a library that provides a foundational building block for writing asynchronous logic. Tokio builds upon Futures and provides a platform for writing fast networking code - this is particularly useful as it is the foundation on which the websockets, Kafka \cite{kafka}, Couchbase \cite{couchbase} and Redis \cite{redis} libraries are built.
+After discussion and evaluation, it was decided that the superclient was the superior option and due to architectural similarities, team members familiar with the event bus would quickly be familiar with the superclient; and through use of a mentor-mentee approach, another team member would be able to write scripts in Lua quickly. Whilst this overall was a good approach and produced a better product, the disadvantage to this was that any team members that were not very familiar with the event bus may have struggled to fully comprehend the workings of the superclient.
 
-In order to interface with Lua \cite{lua}, the superclient makes use of rlua \cite{rlua} - rlua makes use of the bare C api exposed by Lua. Further, redis-rs \cite{redis-rs} is used for the communication with the Redis ephermeral storage maintained by the superclient.
+\subsubsection{React}
+React is a relatively new and lightweight library for building user interfaces. It is considered to be a powerful JavaScript library designed with high performance applications; clean, consistent abstractions; and maintainability in mind.
 
-Both the superclient and the event bus are built with an Actor architecture - in particular, using the excellent Actix \cite{actix} library. In an Actor architecture, every part of the system is modelled as an actor and they communicate by sending messages between actors. It was found that this was a good method as the vast majority of the functionality could be isolated to the processing of a message - this greatly simplifies the control flow and allows functional changes to be isolated to the single message handler where a feature is implemented.
+The team chose React for the following reasons:
 
+\begin{enumerate}
+    \item Popularity of the framework - React is a popular choice in general and it would be advantageous to have some experience with it for future projects.
+    \item Lightweight nature - since the team decided against a heavyweight desktop application, and instead wanted a single-page web application, React was an appropriate choice, as it is just a view layer and React itself is not prescriptive about the data model used.
+    \item Component-based Architecture - each component has its own internal logic which allows it to be re-used anywhere it is needed. This gave the UI a consistent look and feel and enabled increased code re-use. Furthermore, it gave the ability to better maintain and grow the codebase allowing for easier development.
+\end{enumerate}
+
+% The Problems
+When it was decided that the UI should be prioritised and scheduled into a sprint, the team chose initially to assign this to Naji - this was due to his graphic design experience and interest in front-end development. Having no experience with React and little-to-none with JavaScript, this gave Naji an opportunity to expand his knowledge and familiarise himself with new technologies.
+
+React development was slow at the start. Understanding its unique architecture and component communication was not straightforward as React's documentation felt more like \say{a maze of information}. Additionally, finding the best libraries and patterns for the system took a considerable amount of time. Naji managed to understand the ideas behind the frameworks and produced the first iteration of the UI - which focused more on setting up React and the layout of the page. This gave the clients a better idea of the team's approach to the UI requirement and the team was able to gain feedback as a result.
+
+The feedback from the client was, to paraphrase, \say{A UI can be made over the weekend! Spend more time on other (important) aspects of the project}. Whilst this was valuable feedback, it was not necessarily constructive as in the previous client meeting they had emphasised the need for a user interface to demo with, and that the demo should not involve any command-line. Furthermore, it was not representative of the amount of time required to complete the task.
+
+% The Solutions
+As the UI was progressing slowly, the team identified the need to assign more team members to the UI to expedite the process. After a discussion, the team decided to create the BfaF. In the following sprint, Patrick implemented the BfaF and created the data model of the UI using Redux. This, in theory, allowed Naji to focus more on the view layer, and would have allowed for faster completion. Whilst this was the intention, there was some friction with this approach in that there was a reduced understanding of the workings of the BfaF.
+
+Following the introduction of the BfaF, Naji and Patrick made use of ad-hoc mentoring to help reduce any knowledge gaps - this allowed Naji to ask Patrick for help or advice when required. In particular, an example of this is the development of the log-in form - Naji was struggling with some JavaScript and didn't understand how to connect Redux together with the user input - Patrick helped guide Naji through the issue and resolve it while explaining the underlying cause, and also learning more about React himself.
+
+% The Conclusion
+In conclusion, the final UI was completed to meet the requirements. While some team members did express concerns over the time taken to produce the UI - which resulted in a change in strategy - the team eventually worked to resolve any concerns and issues. The UI was complete and refined just before the deadline with the minimum requirements and most of the intended features implemented. In addition to its successful completion, the team also managed to avoid a significant knowledge silo forming within the team by also having Patrick and Connor working on parts of the UI.
+
+Whilst the UI was completed, the team identified some issues with the process used for its completion. Initially, the approach taken was somewhat unstructured, and the instructions given were for a \say{basic UI}. While this approach may have worked well in other cases, in this instance it was not a fit and the requirements of the UI should have been more clearly defined and time-bounded. Once the team realised this problem, the approach changed to getting more people involved and having a more structured set of requirements for the UI. This acted as a catalyst to speed up its completion. Also, as a team there was little agreement around UI design/discussion, although this was also down, in part, to the mixed sentiment about it from the client.
+
+\subsection{Mono-repo vs Multi-repo}
+Initially, the project's source was stored in a single repository on the university-provided GitLab instance. As the project grew, the suitability of this solution began to decrease - it became more challenging to triage issues and organise the various components of the project. This was particularly evident once development started on the microservices and the repository began to contain many more independent projects.
+
+In response to this, it was decided that the projects would be split up into multiple repositories, orchestrated by a single \say{demo} repository with submodules. This allowed the team to iterate on the different components in independent repositories, but have a single version-controlled environment that would orchestrate our \say{production} environment.
+
+Due to the initial use of a single repository, all issue tracking was centralised around that repository - which also housed our dissertation and project documentation. Issues remained in this repository for the duration of the project as this would ease visibility into the issue tracking for the marker. All repositories were contained within one GitLab group - by the end of the project, the system spanned 12 repositories.
+
+By re-organising to use a multi-repo system, the primary maintainers of different components had flexibility to work in the most efficient way. However, this did introduce complications as implementation of features that spanned multiple components were harder to keep track of as they couldn't be introduced in a single PR in a single project. This also allowed development to progress in the various components while the demo repo pinned commits of each component that worked together. Overall, organising the system using multiple repositories was a superior choice given the project contained various, independent moving parts.
+
+\section{Team Dynamics}
+\label{sec:team-dynamics}
+Throughout the project, there were various considerations and events that influenced how the team collaborated. Everything from the structure of the team to the culture created influenced the work completed each sprint and the final product achieved. This section goes into detail on the team's interpersonal dynamics.
+
+\subsection{Team Overview}
+Prior to the project, none of the team knew each other very well. The team had a wide range of experiences and interests that contributed to different points of view throughout the course of the project.
+
+The team had a variety of previous experience: David and Patrick, specifically, had industry experience; while other team members' experience was limited to university assignments. As such, some team members had a clearer vision of what the project might become than others and this led to them falling naturally into taking leadership-like responsibilities - such as planning, management, technical design and the overall roadmap of the project.
+
+\subsection{Initial Communication}
+Initially, the team did not communicate as well as they could have. This was a symptom of a initial lack of familiarity that was resolved by increased use of Slack and frequent updating of individual progress. Additionally, the team had to learn about event sourcing and the first iteration was taken up with the team doing personal research. Although there could have been some more information sharing, this was, by nature, an individual task.
+
+Information sharing could have been improved by having meet-ups or Skype sessions to discuss collective learning as the team gained more background knowledge. This could have brought the team to the adoption of mentoring sooner. By sharing knowledge that is acquired and then having to teach it to someone else, the concept is re-enforced for both parties and improves the learning rate of the team as a collective.
+
+\subsection{Assignment/Break-down of Tasks}
+Throughout the project, task allocation was well-structured and controlled. GitLab issues were created to track the details and progress of a task and enabled task assignment to team members. When development started, the issues created had a clearly defined scope, and were prioritised based on the requirements of the client. It took a couple of sprints for the team to be confident in how much work could be completed in each sprint.
+
+Most larger objectives were broken down into sub-tasks that could be worked-on in isolation without merge conflicts. This was especially noticeable when we had many components developed such as the event bus and client services. In order for this to take place, we had to reach a point where the basic components of the system could be iterated on independently and the underlying structure of the code allowed this to happen. This was especially the case in the development of the event bus.
+
+\subsubsection{UI}
+One area where this breaking down of larger tasks was not done well was in the development of the user interface. This was down in part to the client and some team members' attitude of it being a simple, negligible task. Due to this inaccurate view of it, the task was not broken down enough to be tackled as easily as possible. The true difficulty of the task was more than expected due to several factors, including: unfamiliarity with frameworks and libraries; initial indecision over the architecture and the later introduction of the BfaF.
+
+When the need for the BfaF was identified and the design of how the UI and client services would communicate was decided upon, this added a significant amount of work to be completed. In order for its quick completion, Patrick spent some time developing this in its entirety so that UI work could be unblocked. In retrospect, if the process of the creation of BfaF was split up into small sub-tasks and spread between Naji and Patrick (and/or other team members), this would have improved Naji's visibility of the workings of BfaF and allowed him to complete the UI with greater ease. At a higher level, if the initial scoping of the UI was conducted with more rigour, then the need for a BfaF (or at least a better understanding of the architecture involved) would have allowed the work to be split up earlier and with greater clarity.
+
+Whilst this was identified at a much later stage and somewhat over-corrected, this could have been changed a lot sooner when it was observed that the UI was taking longer than expected (the client's estimate of a weekend's work). This could have been broken down into small, manageable tasks and the workload could have been spread to multiple team members from the outset.
+
+\subsection{Tensions}
+In retrospect, the team identifies that the way the user interface was handled was the root cause of later disagreements and misunderstandings within the team. A disconnect had formed between the team member who was the main contributor to the UI - Naji - and some other team members - Patrick and David - who did not have clear visibility of progress and made rash conclusions about the effort being put in. Had the team continued with their attempts to ensure that each member had knowledge of each part of the system, this disconnect could have been avoided.
+
+Additionally, as the submission date neared, comments were made regarding the final delta and dissertation submissions which added to the tensions between the team. Some of these comments were worded wrongly and perceived as threatening and immature, which prompted the involvement of the University. The comments were apologised for, as they did not reflect the true intent of the message being conveyed and were also the result of other personal factors.
+
+Tensions within the team were also created, in part, due to a failure of communication on both sides. This was particularly due to a failure in the team's leadership to identify the UI as a critical component and to treat it with a similar process to other components of the system. In future, team members that take on leadership responsibilities need to more thoroughly investigate the scope and difficulty of a task, and be more rigorous with the process used for all tasks equally. On the other hand, team members that are experiencing difficulties in completing a task should reach out for help sooner and \say{speak up}, making their voices heard, as more feedback on how things are going allows agile processes to work more effectively and to provide focus to areas that are not progressing as ideally as they should be.
+
+%------------------------------------------------------------------------------
+% From Moodle:
+%  A conclusion that draws general and wider lessons from the case study
+%  (approximately 1-2 pages).
 %------------------------------------------------------------------------------
 \section{Conclusions}
 \label{sec:conclusions}
-Throughout this project, many lessons were learned about software engineering and common processes that drive software engineering processes.
+% From dissertation template:
+%  Explain the wider lessons that you learned about software engineering,
+%  based on the specific issues discussed in previous sections. Reflect
+%  on the extent to which these lessons could be generalised to other
+%  types of software project.  Relate the wider lessons to others
+%  reported in case studies in the software engineering literature.
 
-It was made clear during the project that the division of tasks is important, especially in ensuring that each team member has the opportunity to apply themselves fully. It was important that there was sufficient surface area within the project such that multiple team members can contribute simultaneously so that every change does not conflict and that team members are not blocked waiting for fundamental changes.
+Throughout this project, many lessons were learned about software engineering and the common processes that drive it.
 
-Furthermore, during the project, various techniques - including pair programming and mentored issues - were used to improve team cohesion and collaboration. This also helped reduce knowledge silos, where only a few team members know everything about part of the project. Over the duration of the project, the team became more familiar with each other and techniques for collaboration improved and became more effective and efficient.
+Many team members had their first experience with an agile software development methodology during this project - Scrum was a particularly effective choice as this was a development project with a backlog of desired requirements to deliver. These requirements could be prioritised, scored and completed within the context of a sprint.
 
-Pair programming and mentored issues could be easily applied in future software engineering projects depending on the needs of the team - no part of these techniques were specific or depended on this specific project.
+Through using Scrum, the team gained an appreciation for the importance of proper prioritisation and the advantages of scoring issues based on their complexity or the effort required. The team also learned about time-bounding work to a specific time-period and the focus it provides for a team. Deciding in advance what will be worked on in a sprint allowed the team to be free of distractions or feeling overwhelmed by the amount of work that must be taken on.
 
-Another key aspect of the project was brainstorming sessions in which the team worked together to clearly define solutions to the technical problems associated with the problem domain (such as consistency, redelivery, etc). This required lots of thought to ensure that solutions to the problems covered every case that we would encounter and didn't encur performance penalties.
+Scrum and these lessons would work very well for other projects similar to this that are development-focused, and don't have maintenance or general support tasks in their scope. For these types of project, another methodology, such as Kanban \cite{kanban}, may be better suited to meet the needs of that type of project.
 
-During this project, the members of the team learned and used a wide variety of technologies, advancing their knowledge in some tools that they had familiarity and taking first steps in new technologies they hadn't had an opportunity to learn. Each of the requirements of the project as set by Avaloq was met, and further enhancements such as the reporting service and microservice framework were also included which exceeded the initial requirements.
+Another beneficial experience gained during this project was that of using pair programming and mentoring techniques. Using pair programming and mentoring improved team cohesion, collaboration and reduced knowledge silos. Over the course of the project, the team became more familiar with each other and techniques for collaboration improved and became more efficient. In a mentored approach, the mentor learned how detailed of a description to include in an issue to enable the mentee to benefit most from the task - widening their skill set and knowledge of a particular area. Pair programming and mentored issues could be easily applied in other software engineering projects depending on the needs of the team - no part of these techniques were specific to or depended on this project.
 
-The aim of the project from the client's perspective was to build an event sourcing framework and demonstrate it running in the context of a demo application, thus proving event sourcing as a concept to use in a larger-scale system. Our team are confident that these goals have been accomplished, event sourcing shown to be a viable solution for larger projects and the requirements of the client fully satisfied - thus the team are very pleased with the outcome of this project, and have thoroughly enjoyed working on this problem over the last 6 months.
+Any project can provide the opportunity for learning and personal growth, this project was no different. By choosing new technologies, team members had many opportunities to learn; to advance their knowledge in some tools that they had familiarity with; and to take first steps in new technologies they hadn't had an opportunity to try previously.
+
+In particular, many team members gained hands-on experience working with a codebase for a long time and developed an appreciation for the problem of technical debt and how with proper planning and prioritisation these problems can be overcome. These problems can plague any software engineering project and so the lessons learned in overcoming technical debt during this project will be valuable in many future projects.
+
+One of the major lessons of this project involves the challenges and compromises involved when collaborating as a team effectively. In this project, team members realised the benefits of addressing issues early and that poor communication can cause breakdowns within the project - these lessons will be invaluable in shaping decisions in future projects. Effective collaboration is a soft skill that will be incredibly beneficial within any software engineering project and can be the difference between its success and failure.
+
+The aim of the project from the client's perspective was to build an event sourcing framework and demonstrate it running in the context of a demo application, thus proving event sourcing as a viable architecture to use in a large-scale system. The team is confident that these goals have been accomplished, event sourcing shown to be a viable solution for larger projects and the requirements of the client fully satisfied.
+
+In conclusion, the team feels that they have progressed their knowledge of software engineering practices and processes, have learned many lessons in collaboration and are confident they will be able to apply these lessons to future projects.
 
 %------------------------------------------------------------------------------
+% From Moodle:
+%  References (approximately 1-2 pages)
+%------------------------------------------------------------------------------
 \addcontentsline{toc}{section}{References}
+
 \bibliographystyle{plain}
 \bibliography{dissertation}
 
